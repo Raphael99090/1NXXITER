@@ -1,21 +1,21 @@
 --[[
-    1NXITER HUB | Versão 3.0 Modular
-    Ponto de Entrada (Main Loader)
-    Repositório: Raphael99090/1NXXITER
+    1NXITER HUB | Versão 3.0 (Modular SRC)
+    Desenvolvedor: Raphael99090
+    Repositório: 1NXXITER
 ]]
 
+-- [1] SEGURANÇA: Evita carregar o script duas vezes
 if getgenv().InxiterHubLoaded then 
-    return warn("⚠️ [1NXITER]: Hub já está em execução!") 
+    return warn("⚠️ [1NXITER]: O Hub já está em execução!") 
 end
 
--- ======================================================
--- Configurações de Caminho
--- ======================================================
+-- [2] CONFIGURAÇÃO DE LINKS
 local REPO = "Raphael99090/1NXXITER"
 local BRANCH = "main"
 local BASE_URL = "https://raw.githubusercontent.com/" .. REPO .. "/" .. BRANCH .. "/src/"
 
--- Tabela global interna (não polui o getgenv desnecessariamente)
+-- [3] ESTRUTURA CENTRAL (Tabela Hub)
+-- Todos os módulos serão injetados aqui dentro
 local Hub = {
     Core = {},
     Features = {},
@@ -24,16 +24,17 @@ local Hub = {
     }
 }
 
--- ======================================================
--- Helper: Importador Modular
--- ======================================================
+-- [4] FUNÇÃO IMPORT (O coração do Loader)
+-- Esta função baixa o código do GitHub, compila e retorna o módulo
 local function Import(path)
     local url = BASE_URL .. path .. ".lua"
     
-    print("📥 [1NXITER]: Baixando módulo -> " .. path)
+    -- Print no console para você acompanhar o carregamento (F9)
+    print("📥 [1NXITER]: Carregando -> " .. path)
     
     local success, code = pcall(function()
-        return game:HttpGet(url .. "?nocache=" .. tostring(math.random(1, 999999)))
+        -- O math.random evita que o Roblox use uma versão "cacheada" (antiga) do arquivo
+        return game:HttpGet(url .. "?cache=" .. math.random(1, 999999))
     end)
 
     if success and code and not code:match("^404") then
@@ -41,75 +42,78 @@ local function Import(path)
         if func then
             local runSuccess, result = pcall(func)
             if runSuccess then
-                return result
+                return result -- Retorna o conteúdo do módulo (return ESP, etc)
             else
                 warn("❌ [1NXITER]: Erro ao executar módulo (" .. path .. "): " .. tostring(result))
             end
         else
-            warn("❌ [1NXITER]: Erro de sintaxe no arquivo (" .. path .. "): " .. tostring(err))
+            warn("❌ [1NXITER]: Erro de sintaxe em (" .. path .. "): " .. tostring(err))
         end
     else
-        warn("❌ [1NXITER]: Falha ao baixar arquivo ou 404 (" .. path .. ")")
+        warn("❌ [1NXITER]: Arquivo não encontrado ou erro de rede (404) -> " .. url)
     end
     return nil
 end
 
 -- ======================================================
--- Carregamento Sequencial
+-- [5] ORDEM DE CARREGAMENTO (ETAPAS)
 -- ======================================================
 
--- 1. Carregar Core (Essencial)
-Hub.Core.Utils = Import("01-Core/Utils")
-Hub.Core.State = Import("01-Core/State")
+-- ETAPA 1: Carregar Core (Essencial para o Hub existir)
+Hub.Core.Utils = Import("Core/Utils")
+Hub.Core.State = Import("Core/State")
 
--- 2. Carregar Features (Lógica)
-local features = {
-    "AutoTrain", "Aimbot", "ESP", "PlayerMods", "FreeCam", "SpyChat"
+-- ETAPA 2: Carregar Features (As funções de hack)
+local featuresList = {
+    "AutoTrain", "Aimbot", "ESP", "PlayerMods", "FreeCam", "SpyChat", "Visuals"
 }
-for _, feature in pairs(features) do
-    Hub.Features[feature] = Import("02-Features/" .. feature)
+for _, f in pairs(featuresList) do
+    Hub.Features[f] = Import("Features/" .. f)
 end
 
--- 3. Carregar Tabs da Interface (Desenho das Abas)
-local tabs = {
+-- ETAPA 3: Carregar Tabs (O conteúdo de cada aba da UI)
+local tabsList = {
     "TrainTab", "CombatTab", "ESPTab", "MovementTab", "CameraTab", "SystemTab"
 }
-for _, tab in pairs(tabs) do
-    Hub.UI.Tabs[tab] = Import("03-Interface/Tabs/" .. tab)
+for _, t in pairs(tabsList) do
+    Hub.UI.Tabs[t] = Import("Interface/Tabs/" .. t)
 end
 
--- 4. Carregar Interface Main (Montador da Janela)
-Hub.UI.Main = Import("03-Interface/Main")
+-- ETAPA 4: Carregar Interface Main (O montador da janela)
+Hub.UI.Main = Import("Interface/Main")
 
 -- ======================================================
--- Inicialização Final
+-- [6] INICIALIZAÇÃO FINAL
 -- ======================================================
-local function Initialize()
-    -- Verificação de integridade básica
+local function Start()
+    -- Verificação de Integridade: Se State ou Main falharem, o script para.
     if not Hub.Core.State or not Hub.UI.Main then
-        return warn("❌ [1NXITER]: Carregamento incompleto. Verifique o console (F9).")
+        return warn("❌ [1NXITER]: Falha crítica. Verifique se as pastas e nomes no GitHub estão corretos.")
     end
 
-    print("✅ [1NXITER]: Módulos carregados. Iniciando UI...")
+    print("✅ [1NXITER]: Todos os módulos carregados. Iniciando sistema...")
     
+    -- Marca o Hub como carregado
     getgenv().InxiterHubLoaded = true
 
-    -- 1. Carrega Configurações do JSON
+    -- Carrega as configurações salvas no JSON do celular
     local Config = Hub.Core.State:LoadConfig()
     local RuntimeState = Hub.Core.State:GetRuntimeState()
 
-    -- 2. Inicia funções em segundo plano (Anti-AFK, etc)
-    if Hub.Core.Utils and Hub.Core.Utils.AntiAFK then
+    -- Inicia funções de fundo (Anti-AFK, Auto-Rejoin, etc)
+    if Hub.Core.Utils then
         Hub.Core.Utils:AntiAFK(RuntimeState)
+        Hub.Core.Utils:AutoRejoin(Config)
     end
 
-    -- 3. Chama o montador da interface passando os módulos
+    -- Liga a Interface e desenha as abas
     Hub.UI.Main:Load(Hub, Config, RuntimeState)
 end
 
--- Rodar sistema
-local success, err = pcall(Initialize)
-if not success then
+-- Executa a inicialização de forma protegida
+local finalSuccess, finalErr = pcall(Start)
+
+if not finalSuccess then
     getgenv().InxiterHubLoaded = false
-    warn("❌ [1NXITER]: Falha crítica na inicialização -> " .. tostring(err))
+    warn("❌ [1NXITER]: Erro fatal durante a inicialização -> " .. tostring(finalErr))
 end
