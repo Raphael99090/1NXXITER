@@ -21,12 +21,14 @@ function InterfaceMain:Load(Hub, Config, State)
         MinimizeKey = Enum.KeyCode.LeftControl
     })
 
-    -- [2.5] BOTÃO FLUTUANTE (BOLINHA) PARA RESTAURAR
+    -- [2.5] BOTÃO FLUTUANTE (BOLINHA)
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local RunService = game:GetService("RunService")
+    local TweenService = game:GetService("TweenService")
 
-    -- Cria ScreenGui para a bolinha
+    -- Cria ScreenGui
     local MinimizeGui = Instance.new("ScreenGui")
     MinimizeGui.Name = "InxiterMinimizeButton"
     MinimizeGui.ResetOnSpawn = false
@@ -36,40 +38,64 @@ function InterfaceMain:Load(Hub, Config, State)
     -- Botão circular
     local CircleButton = Instance.new("TextButton")
     CircleButton.Name = "RestoreButton"
-    CircleButton.Size = UDim2.new(0, 50, 0, 50)
-    CircleButton.Position = UDim2.new(1, -70, 0, 20) -- Canto superior direito
-    CircleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    CircleButton.Size = UDim2.new(0, 55, 0, 55)
+    CircleButton.Position = UDim2.new(1, -75, 0, 25)
+    CircleButton.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
     CircleButton.Text = "1NX"
     CircleButton.TextColor3 = Color3.new(1, 1, 1)
-    CircleButton.TextSize = 14
+    CircleButton.TextSize = 13
     CircleButton.Font = Enum.Font.GothamBold
     CircleButton.BorderSizePixel = 0
     CircleButton.AutoButtonColor = true
     CircleButton.Parent = MinimizeGui
 
-    -- Deixa circular
+    -- Circular
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(1, 0)
     UICorner.Parent = CircleButton
 
-    -- Sombra/efeito
+    -- Stroke
     local UIStroke = Instance.new("UIStroke")
-    UIStroke.Color = Color3.fromRGB(200, 0, 0)
+    UIStroke.Color = Color3.fromRGB(180, 20, 20)
     UIStroke.Thickness = 2
     UIStroke.Parent = CircleButton
 
-    -- Glow effect
+    -- Gradient
     local UIGradient = Instance.new("UIGradient")
     UIGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 30, 30))
     })
+    UIGradient.Rotation = 45
     UIGradient.Parent = CircleButton
 
-    -- Esconde a bolinha inicialmente (janela começa aberta)
+    -- Esconde inicialmente
     MinimizeGui.Enabled = false
 
-    -- Draggable (arrastável)
+    -- Estado
+    local isMinimized = false
+
+    -- Mostrar
+    local function ShowButton()
+        MinimizeGui.Enabled = true
+        TweenService:Create(CircleButton, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 55, 0, 55)
+        }):Play()
+    end
+
+    -- Esconder
+    local function HideButton()
+        TweenService:Create(CircleButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0)
+        }):Play()
+        task.delay(0.2, function()
+            if not isMinimized then
+                MinimizeGui.Enabled = false
+            end
+        end)
+    end
+
+    -- Draggable
     local dragging = false
     local dragStart, startPos
 
@@ -78,6 +104,9 @@ function InterfaceMain:Load(Hub, Config, State)
             dragging = true
             dragStart = input.Position
             startPos = CircleButton.Position
+            TweenService:Create(CircleButton, TweenInfo.new(0.1), {
+                Size = UDim2.new(0, 48, 0, 48)
+            }):Play()
         end
     end)
 
@@ -94,62 +123,99 @@ function InterfaceMain:Load(Hub, Config, State)
     CircleButton.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
+            TweenService:Create(CircleButton, TweenInfo.new(0.1), {
+                Size = UDim2.new(0, 55, 0, 55)
+            }):Play()
         end
     end)
 
     -- Clique para restaurar
     CircleButton.MouseButton1Click:Connect(function()
-        Window:Minimize(false) -- Restaura a janela
-        MinimizeGui.Enabled = false
+        if dragging then return end
+        isMinimized = false
+        Window:Minimize(false)
+        HideButton()
     end)
 
-    -- Detecta quando a janela é minimizada
-    local oldMinimize = Window.Minimize
-    if oldMinimize then
-        Window.Minimize = function(self, state)
-            oldMinimize(self, state)
-            MinimizeGui.Enabled = state
-        end
-    end
+    -- ============================================================
+    -- DETECÇÃO VIA VERIFICAÇÃO DIRETA DO GUI DA FLUENT
+    -- ============================================================
 
-    -- Hook no botão de minimizar da Fluent (se existir)
+    -- Aguarda o GUI da Fluent ser criado
+    local fluentGui = nil
+    local mainFrame = nil
+
     task.spawn(function()
-        task.wait(1)
-        -- Tenta detectar o botão de minimizar da Fluent
-        local fluentGui = PlayerGui:FindFirstChild("Fluent")
-        if fluentGui then
-            for _, obj in pairs(fluentGui:GetDescendants()) do
-                if obj:IsA("TextButton") or obj:IsA("ImageButton") then
-                    -- Procura por botão de minimizar (geralmente tem ícone de traço ou seta)
-                    if obj.Name:lower():find("min") or obj.Name:lower():find("hide") then
-                        obj.MouseButton1Click:Connect(function()
-                            task.wait(0.1)
-                            MinimizeGui.Enabled = true
-                        end)
+        -- Espera o ScreenGui da Fluent aparecer
+        while not fluentGui do
+            fluentGui = PlayerGui:FindFirstChild("Fluent")
+            task.wait(0.1)
+        end
+
+        -- Procura o frame principal (geralmente é o maior frame)
+        local function FindMainFrame()
+            for _, child in pairs(fluentGui:GetDescendants()) do
+                if child:IsA("Frame") and child.Name ~= "Notification" then
+                    -- O frame principal geralmente tem um tamanho grande
+                    local size = child.AbsoluteSize
+                    if size.X > 400 and size.Y > 300 then
+                        return child
                     end
                 end
             end
+            return nil
+        end
+
+        -- Aguarda o frame principal carregar
+        while not mainFrame do
+            mainFrame = FindMainFrame()
+            task.wait(0.2)
+        end
+
+        -- Monitora mudanças de visibilidade
+        mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+            local visible = mainFrame.Visible
+            if not visible and not isMinimized then
+                isMinimized = true
+                ShowButton()
+            elseif visible and isMinimized then
+                isMinimized = false
+                HideButton()
+            end
+        end)
+
+        -- Verificação inicial
+        if not mainFrame.Visible then
+            isMinimized = true
+            ShowButton()
         end
     end)
 
-    -- Também detecta via tecla de minimizar
-    local UserInputService = game:GetService("UserInputService")
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and input.KeyCode == Enum.KeyCode.LeftControl then
-            task.wait(0.1)
-            -- Verifica se a janela está minimizada
-            local isMinimized = false
-            pcall(function()
-                -- Tenta detectar estado pela visibilidade
-                local fluentGui = PlayerGui:FindFirstChild("Fluent")
-                if fluentGui then
-                    local mainFrame = fluentGui:FindFirstChildOfClass("Frame")
-                    if mainFrame then
-                        isMinimized = not mainFrame.Visible
+    -- Fallback: se o GUI mudar de nome ou estrutura
+    PlayerGui.ChildAdded:Connect(function(child)
+        if child.Name == "Fluent" and child:IsA("ScreenGui") then
+            fluentGui = child
+            task.wait(0.5)
+            -- Re-procura o frame
+            for _, descendant in pairs(child:GetDescendants()) do
+                if descendant:IsA("Frame") then
+                    local size = descendant.AbsoluteSize
+                    if size.X > 400 and size.Y > 300 then
+                        mainFrame = descendant
+                        mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+                            local visible = mainFrame.Visible
+                            if not visible and not isMinimized then
+                                isMinimized = true
+                                ShowButton()
+                            elseif visible and isMinimized then
+                                isMinimized = false
+                                HideButton()
+                            end
+                        end)
+                        break
                     end
                 end
-            end)
-            MinimizeGui.Enabled = isMinimized
+            end
         end
     end)
 
