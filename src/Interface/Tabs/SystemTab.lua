@@ -31,8 +31,11 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:AddButton({ 
         Title = "FECHAR HUB", 
         Callback = function() 
-            Hub.UI.Window:Destroy() 
+            -- Antes só destruía a janela e deixava aimbot/noclip/FOV
+            -- esticado etc. rodando pra sempre em segundo plano.
+            Hub:Unload()
             getgenv().InxiterHubLoaded = false 
+            getgenv().InxiterHubInstance = nil
         end 
     })
 end
