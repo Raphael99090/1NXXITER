@@ -229,9 +229,17 @@ function InterfaceMain:Load(Hub, Config, State)
     end)
 
     -- Clique para restaurar
+    -- Em vez de chamar Window:Minimize() direto (a assinatura real da Fluent
+    -- é incerta e já causou restaurações que não funcionavam), simulamos o
+    -- próprio toque da tecla MinimizeKey (LeftControl) — o mesmo caminho que
+    -- JÁ sabemos que funciona, porque é assim que a bolinha aparece hoje.
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+
     CircleButton.MouseButton1Click:Connect(function()
         if dragging then return end
-        Window:Minimize() -- toggle puro, igual o LeftControl interno da Fluent — o hook acima cuida do resto
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
+        task.wait(0.05)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
     end)
 
     -- ============================================================
