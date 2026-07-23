@@ -6,6 +6,18 @@ local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- Quando a câmera vira Scriptable (usado pra mirar), o script padrão de
+-- controles touch do Roblox se desliga por conta própria — é assim que
+-- o joystick de andar "desaparece" no celular. Forçar Enable() aqui
+-- mantém ele visível mesmo com a câmera em modo Scriptable.
+local function KeepTouchControlsEnabled()
+    local ok = pcall(function()
+        local PlayerModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
+        PlayerModule:GetControls():Enable()
+    end)
+    return ok
+end
+
 Aimbot.Settings = {
     Enabled = false,
     TeamCheck = false,
@@ -97,6 +109,7 @@ Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
             -- briga com o Lerp e fica tremendo.
             if Camera.CameraType ~= Enum.CameraType.Scriptable then
                 Camera.CameraType = Enum.CameraType.Scriptable
+                KeepTouchControlsEnabled() -- sem isso o joystick de andar some no celular
             end
             wasAiming = true
 
