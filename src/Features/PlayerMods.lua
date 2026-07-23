@@ -32,11 +32,14 @@ local function RestoreCollisions()
     end
 end
 
+local Connections = {}
+
 if LocalPlayer.Character then RefreshCharacterPartsCache(LocalPlayer.Character) end
-LocalPlayer.CharacterAdded:Connect(function(char)
+
+table.insert(Connections, LocalPlayer.CharacterAdded:Connect(function(char)
     RefreshCharacterPartsCache(char)
-end)
-LocalPlayer.CharacterAdded:Connect(function(char)
+end))
+table.insert(Connections, LocalPlayer.CharacterAdded:Connect(function(char)
     -- Pega partes novas que aparecem depois do spawn inicial (acessórios, etc.)
     char.DescendantAdded:Connect(function(desc)
         if desc:IsA("BasePart") then
@@ -44,10 +47,10 @@ LocalPlayer.CharacterAdded:Connect(function(char)
             if PlayerMods.Settings.Noclip then desc.CanCollide = false end
         end
     end)
-end)
+end))
 
 -- Loop de persistência (Garante que o Speed/Jump não resete ao morrer)
-RunService.RenderStepped:Connect(function()
+table.insert(Connections, RunService.RenderStepped:Connect(function()
     local hum = GetHumanoid()
     if hum then
         if PlayerMods.Settings.SpeedEnabled then hum.WalkSpeed = PlayerMods.Settings.SpeedValue end
@@ -56,24 +59,24 @@ RunService.RenderStepped:Connect(function()
             hum.JumpPower = PlayerMods.Settings.JumpValue 
         end
     end
-end)
+end))
 
 -- Loop de Noclip (usa o cache em vez de varrer o personagem todo frame)
-RunService.Stepped:Connect(function()
+table.insert(Connections, RunService.Stepped:Connect(function()
     if PlayerMods.Settings.Noclip then
         for _, part in pairs(cachedParts) do
             if part and part.Parent then part.CanCollide = false end
         end
     end
-end)
+end))
 
 -- Pulo Infinito
-UserInputService.JumpRequest:Connect(function()
+table.insert(Connections, UserInputService.JumpRequest:Connect(function()
     if PlayerMods.Settings.InfJump then
         local hum = GetHumanoid()
         if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
-end)
+end))
 
 function PlayerMods:ToggleSpeed(v) self.Settings.SpeedEnabled = v end
 function PlayerMods:ToggleJumpPower(v) self.Settings.JumpEnabled = v end
@@ -91,6 +94,12 @@ function PlayerMods:DisableAll()
     RestoreCollisions()
     local hum = GetHumanoid()
     if hum then hum.WalkSpeed = 16 hum.JumpPower = 50 end
+end
+
+function PlayerMods:Unload()
+    self:DisableAll()
+    for _, c in pairs(Connections) do c:Disconnect() end
+    Connections = {}
 end
 
 return PlayerMods
