@@ -36,18 +36,28 @@ function InterfaceMain:Load(Hub, Config, State)
     MinimizeGui.Parent = PlayerGui
 
     -- Botão circular
-    local CircleButton = Instance.new("TextButton")
+    local CircleButton = Instance.new("ImageButton")
     CircleButton.Name = "RestoreButton"
     CircleButton.Size = UDim2.new(0, 55, 0, 55)
     CircleButton.Position = UDim2.new(1, -75, 0, 25)
     CircleButton.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
-    CircleButton.Text = "1NX"
-    CircleButton.TextColor3 = Color3.new(1, 1, 1)
-    CircleButton.TextSize = 13
-    CircleButton.Font = Enum.Font.GothamBold
+    CircleButton.ScaleType = Enum.ScaleType.Crop
+    CircleButton.Image = "" -- preenchido depois pelo LoadCustomIcon, se disponível
     CircleButton.BorderSizePixel = 0
     CircleButton.AutoButtonColor = true
     CircleButton.Parent = MinimizeGui
+
+    -- Texto de fallback (aparece atrás da imagem; some se a imagem carregar)
+    local FallbackLabel = Instance.new("TextLabel")
+    FallbackLabel.Name = "FallbackText"
+    FallbackLabel.Size = UDim2.new(1, 0, 1, 0)
+    FallbackLabel.BackgroundTransparency = 1
+    FallbackLabel.Text = "1NX"
+    FallbackLabel.TextColor3 = Color3.new(1, 1, 1)
+    FallbackLabel.TextSize = 13
+    FallbackLabel.Font = Enum.Font.GothamBold
+    FallbackLabel.ZIndex = CircleButton.ZIndex - 1
+    FallbackLabel.Parent = CircleButton
 
     -- Circular
     local UICorner = Instance.new("UICorner")
@@ -71,6 +81,37 @@ function InterfaceMain:Load(Hub, Config, State)
 
     -- Esconde inicialmente
     MinimizeGui.Enabled = false
+
+    -- ============================================================
+    -- ÍCONE CUSTOMIZADO (baixado do repo)
+    -- ============================================================
+    -- Troque essa URL pra apontar pro seu arquivo de imagem no repo
+    local ICON_URL = "https://raw.githubusercontent.com/" .. REPO .. "/" .. BRANCH .. "/Assets/1784776415112.png"
+
+    local function LoadCustomIcon()
+        if not (writefile and getcustomasset and isfile) then
+            warn("⚠️ [1NXITER]: Executor sem suporte a writefile/getcustomasset — mantendo texto '1NX'.")
+            return
+        end
+
+        local fileName = "1nxiter_icon.png"
+
+        local ok, err = pcall(function()
+            if not isfile(fileName) then
+                local data = game:HttpGet(ICON_URL .. "?cache=" .. math.random(1, 999999))
+                writefile(fileName, data)
+            end
+            local assetId = getcustomasset(fileName)
+            CircleButton.Image = assetId
+            FallbackLabel.Visible = false
+        end)
+
+        if not ok then
+            warn("❌ [1NXITER]: Falha ao carregar ícone customizado -> " .. tostring(err))
+        end
+    end
+
+    task.spawn(LoadCustomIcon)
 
     -- Estado
     local isMinimized = false
@@ -132,7 +173,7 @@ function InterfaceMain:Load(Hub, Config, State)
     -- Clique para restaurar
     CircleButton.MouseButton1Click:Connect(function()
         if dragging then return end
-        Window:Minimize(false) -- o hook acima já atualiza isMinimized e esconde a bolinha
+        Window:Minimize() -- toggle puro, igual o LeftControl interno da Fluent — o hook acima cuida do resto
     end)
 
     -- ============================================================
@@ -149,9 +190,9 @@ function InterfaceMain:Load(Hub, Config, State)
         local result = OriginalMinimize(self, ...)
 
         -- Descobre o novo estado real da janela após a chamada.
-        -- A Fluent aceita Minimize(true/false); se vier sem argumento
-        -- (toggle via keybind), consultamos uma flag própria conhecida
-        -- da lib como fallback, senão alternamos o nosso próprio estado.
+        -- Chamamos Minimize() sempre como toggle puro (sem boolean) —
+        -- o parâmetro da Fluent não é "estado desejado", então
+        -- alternamos nosso próprio isMinimized manualmente.
         local arg = ...
         local nowMinimized
         if arg == true or arg == false then
