@@ -217,4 +217,8 @@ function ESP:Toggle(state)
     end
 end
 
+function ESP:Unload()
+    self:Toggle(false)
+end
+
 return ESP
