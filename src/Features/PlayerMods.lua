@@ -15,6 +15,37 @@ local function GetHumanoid()
     return LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 end
 
+-- Cache das partes do personagem pro noclip, atualizado só quando o
+-- personagem muda (respawn) — em vez de rodar GetDescendants() a cada frame.
+local cachedParts = {}
+local function RefreshCharacterPartsCache(char)
+    cachedParts = {}
+    if not char then return end
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then table.insert(cachedParts, part) end
+    end
+end
+
+local function RestoreCollisions()
+    for _, part in pairs(cachedParts) do
+        if part and part.Parent then part.CanCollide = true end
+    end
+end
+
+if LocalPlayer.Character then RefreshCharacterPartsCache(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(function(char)
+    RefreshCharacterPartsCache(char)
+end)
+LocalPlayer.CharacterAdded:Connect(function(char)
+    -- Pega partes novas que aparecem depois do spawn inicial (acessórios, etc.)
+    char.DescendantAdded:Connect(function(desc)
+        if desc:IsA("BasePart") then
+            table.insert(cachedParts, desc)
+            if PlayerMods.Settings.Noclip then desc.CanCollide = false end
+        end
+    end)
+end)
+
 -- Loop de persistência (Garante que o Speed/Jump não resete ao morrer)
 RunService.RenderStepped:Connect(function()
     local hum = GetHumanoid()
@@ -27,11 +58,11 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Loop de Noclip
+-- Loop de Noclip (usa o cache em vez de varrer o personagem todo frame)
 RunService.Stepped:Connect(function()
-    if PlayerMods.Settings.Noclip and LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
+    if PlayerMods.Settings.Noclip then
+        for _, part in pairs(cachedParts) do
+            if part and part.Parent then part.CanCollide = false end
         end
     end
 end)
@@ -46,7 +77,10 @@ end)
 
 function PlayerMods:ToggleSpeed(v) self.Settings.SpeedEnabled = v end
 function PlayerMods:ToggleJumpPower(v) self.Settings.JumpEnabled = v end
-function PlayerMods:ToggleNoclip(v) self.Settings.Noclip = v end
+function PlayerMods:ToggleNoclip(v)
+    self.Settings.Noclip = v
+    if not v then RestoreCollisions() end
+end
 function PlayerMods:ToggleInfJump(v) self.Settings.InfJump = v end
 
 function PlayerMods:DisableAll()
@@ -54,6 +88,7 @@ function PlayerMods:DisableAll()
     self.Settings.JumpEnabled = false
     self.Settings.Noclip = false
     self.Settings.InfJump = false
+    RestoreCollisions()
     local hum = GetHumanoid()
     if hum then hum.WalkSpeed = 16 hum.JumpPower = 50 end
 end
