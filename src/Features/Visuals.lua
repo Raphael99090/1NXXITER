@@ -22,11 +22,18 @@ end
 -- Mantém o FOV mesmo se o jogo tentar mudar. Busca workspace.CurrentCamera
 -- a cada frame em vez de cachear — se o jogo trocar a câmera (cutscene,
 -- respawn especial), a feature não "morre" silenciosamente numa referência velha.
-RunService.RenderStepped:Connect(function()
+Visuals._conn = RunService.RenderStepped:Connect(function()
     if Visuals.Settings.StretchedEnabled then
         local Camera = workspace.CurrentCamera
         if Camera then Camera.FieldOfView = Visuals.Settings.FOVValue end
     end
 end)
+
+function Visuals:Unload()
+    self.Settings.StretchedEnabled = false
+    if self._conn then self._conn:Disconnect() self._conn = nil end
+    local Camera = workspace.CurrentCamera
+    if Camera then Camera.FieldOfView = 70 end
+end
 
 return Visuals
