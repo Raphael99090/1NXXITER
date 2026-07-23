@@ -303,12 +303,12 @@ function InterfaceMain:Load(Hub, Config, State)
 
     -- [3] ESTRUTURA DE ABAS
     local Tabs = {
-        Train = Window:AddTab({ Title = "Treino", Icon = "dumbbell" }),
-        Combat = Window:AddTab({ Title = "Combate", Icon = "swords" }),
-        ESP = Window:AddTab({ Title = "Visual", Icon = "eye" }),
-        Movement = Window:AddTab({ Title = "Movimento", Icon = "zap" }),
-        Camera = Window:AddTab({ Title = "Câmera", Icon = "camera" }),
-        System = Window:AddTab({ Title = "Sistema", Icon = "settings" })
+        Train = Window:AddTab({ Title = "Treino", Icon = "lucide-activity" }), -- "dumbbell" não existe no pacote da Fluent
+        Combat = Window:AddTab({ Title = "Combate", Icon = "lucide-swords" }),
+        ESP = Window:AddTab({ Title = "Visual", Icon = "lucide-eye" }),
+        Movement = Window:AddTab({ Title = "Movimento", Icon = "lucide-move" }), -- "zap" não existe no pacote da Fluent
+        Camera = Window:AddTab({ Title = "Câmera", Icon = "lucide-camera" }),
+        System = Window:AddTab({ Title = "Sistema", Icon = "lucide-settings" })
     }
 
     -- [4] INICIALIZAÇÃO DOS MÓDULOS DE ABA
