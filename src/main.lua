@@ -14,6 +14,103 @@ local REPO = "Raphael99090/1NXXITER"
 local BRANCH = "main"
 local BASE_URL = "https://raw.githubusercontent.com/" .. REPO .. "/" .. BRANCH .. "/src/"
 
+-- ======================================================
+-- [1.5] SISTEMA DE KEY (fixa, só pra teste)
+-- ======================================================
+-- IMPORTANTE: isso é só um teste. Uma key fixa dentro do código é
+-- trivialmente extraível (basta ler o script), então qualquer um
+-- que pegue o arquivo consegue achar a KEY sem nem precisar dela.
+-- Serve só pra validar o fluxo de UI antes de trocar por algo real
+-- (endpoint próprio, verificação de membro do Discord, etc).
+local KEY = "1NX-2026"
+
+local function RequestKey(onSuccess)
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+    local KeyGui = Instance.new("ScreenGui")
+    KeyGui.Name = "InxiterKeyGate"
+    KeyGui.ResetOnSpawn = false
+    KeyGui.IgnoreGuiInset = true
+    KeyGui.Parent = PlayerGui
+
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(0, 300, 0, 160)
+    Frame.Position = UDim2.new(0.5, -150, 0.5, -80)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 15, 35)
+    Frame.BorderSizePixel = 0
+    Frame.Parent = KeyGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 10)
+    Corner.Parent = Frame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.BackgroundTransparency = 1
+    Title.Text = "1NXITER HUB — Digite a Key"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 16
+    Title.TextColor3 = Color3.new(1, 1, 1)
+    Title.Parent = Frame
+
+    local Input = Instance.new("TextBox")
+    Input.Size = UDim2.new(1, -30, 0, 36)
+    Input.Position = UDim2.new(0, 15, 0, 50)
+    Input.BackgroundColor3 = Color3.fromRGB(40, 25, 55)
+    Input.TextColor3 = Color3.new(1, 1, 1)
+    Input.PlaceholderText = "Cole sua key aqui..."
+    Input.Text = ""
+    Input.ClearTextOnFocus = false
+    Input.Font = Enum.Font.Gotham
+    Input.TextSize = 14
+    Input.Parent = Frame
+
+    local InputCorner = Instance.new("UICorner")
+    InputCorner.CornerRadius = UDim.new(0, 6)
+    InputCorner.Parent = Input
+
+    local Confirm = Instance.new("TextButton")
+    Confirm.Size = UDim2.new(1, -30, 0, 36)
+    Confirm.Position = UDim2.new(0, 15, 0, 96)
+    Confirm.BackgroundColor3 = Color3.fromRGB(120, 60, 200)
+    Confirm.Text = "Confirmar"
+    Confirm.Font = Enum.Font.GothamBold
+    Confirm.TextSize = 14
+    Confirm.TextColor3 = Color3.new(1, 1, 1)
+    Confirm.Parent = Frame
+
+    local ConfirmCorner = Instance.new("UICorner")
+    ConfirmCorner.CornerRadius = UDim.new(0, 6)
+    ConfirmCorner.Parent = Confirm
+
+    local ErrorLabel = Instance.new("TextLabel")
+    ErrorLabel.Size = UDim2.new(1, -30, 0, 18)
+    ErrorLabel.Position = UDim2.new(0, 15, 1, -22)
+    ErrorLabel.BackgroundTransparency = 1
+    ErrorLabel.Text = ""
+    ErrorLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
+    ErrorLabel.Font = Enum.Font.Gotham
+    ErrorLabel.TextSize = 12
+    ErrorLabel.Parent = Frame
+
+    local function TryKey()
+        if Input.Text == KEY then
+            KeyGui:Destroy()
+            onSuccess()
+        else
+            ErrorLabel.Text = "Key inválida. Tenta de novo."
+            Input.Text = ""
+        end
+    end
+
+    Confirm.MouseButton1Click:Connect(TryKey)
+    Input.FocusLost:Connect(function(enterPressed)
+        if enterPressed then TryKey() end
+    end)
+end
+
 -- [3] ESTRUTURA CENTRAL (Tabela Hub)
 -- Todos os módulos serão injetados aqui dentro
 local Hub = {
@@ -58,6 +155,7 @@ end
 -- ======================================================
 -- [5] ORDEM DE CARREGAMENTO (ETAPAS)
 -- ======================================================
+local function LoadHub()
 
 -- ETAPA 1: Carregar Core (Essencial para o Hub existir)
 Hub.Core.Utils = Import("Core/Utils")
@@ -117,3 +215,9 @@ if not finalSuccess then
     getgenv().InxiterHubLoaded = false
     warn("❌ [1NXITER]: Erro fatal durante a inicialização -> " .. tostring(finalErr))
 end
+
+end
+
+-- Só carrega o hub inteiro depois da key certa (evita gastar
+-- requests no GitHub se a key estiver errada)
+RequestKey(LoadHub)
