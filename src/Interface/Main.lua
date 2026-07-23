@@ -10,6 +10,16 @@ function InterfaceMain:Load(Hub, Config, State)
         return warn("❌ [1NXITER]: Falha ao carregar a biblioteca Fluent.")
     end
 
+    -- A Fluent NÃO tem Window:SetTheme() — o tema só é setado uma vez na
+    -- criação da janela. Trocar em runtime exige o addon oficial InterfaceManager.
+    local imOk, InterfaceManager = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+    end)
+    if not imOk or not InterfaceManager then
+        warn("⚠️ [1NXITER]: Falha ao carregar InterfaceManager — troca de tema ficará indisponível.")
+        InterfaceManager = nil
+    end
+
     -- [2] CRIAÇÃO DA JANELA PRINCIPAL
     local Window = Fluent:CreateWindow({
         Title = "1NXITER HUB | V3.0",
@@ -330,6 +340,20 @@ function InterfaceMain:Load(Hub, Config, State)
     SafeRender("MovementTab", Tabs.Movement)
     SafeRender("CameraTab", Tabs.Camera)
     SafeRender("SystemTab", Tabs.System)
+
+    -- Constrói a seção de tema DE VERDADE (dropdown + preview) dentro da
+    -- aba Sistema, usando o addon oficial. Isso substitui o dropdown manual
+    -- que chamava Window:SetTheme (método que não existe na Fluent).
+    if InterfaceManager then
+        local imOk, imErr = pcall(function()
+            InterfaceManager:SetLibrary(Fluent)
+            InterfaceManager:SetFolder("InxiterHub")
+            InterfaceManager:BuildInterfaceSection(Tabs.System)
+        end)
+        if not imOk then
+            warn("❌ [1NXITER]: Erro ao montar seção de tema -> " .. tostring(imErr))
+        end
+    end
 
     -- [5] FINALIZAÇÃO
     Window:SelectTab(1)
