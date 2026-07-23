@@ -21,7 +21,12 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
             
             -- Envia ao Chat (Utils)
             local msg = (Hub.Core.Utils and Hub.Core.Utils:NumberToText(i)) or tostring(i)
-            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(msg .. " !", "All")
+            local ok, err = pcall(function()
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(msg .. " !", "All")
+            end)
+            if not ok then
+                warn("⚠️ [1NXITER] AutoTrain: falha ao enviar chat -> " .. tostring(err))
+            end
             
             -- Física
             if Player.Character and Player.Character:FindFirstChild("Humanoid") then
