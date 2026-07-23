@@ -161,6 +161,21 @@ function InterfaceMain:Load(Hub, Config, State)
     -- Estado
     local isMinimized = false
 
+    -- Mesmo problema do Aimbot/FreeCam: algo deixa os controles touch
+    -- (joystick de andar) desabilitados, e minimizar também expõe isso.
+    -- Força de volta e também zera ModalEnabled, que a Fluent pode deixar
+    -- ligado e que também esconde os controles nativos do celular.
+    local UserInputService = game:GetService("UserInputService")
+    local function KeepTouchControlsEnabled()
+        pcall(function()
+            local PlayerModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
+            PlayerModule:GetControls():Enable()
+        end)
+        pcall(function()
+            UserInputService.ModalEnabled = false
+        end)
+    end
+
     -- Mostrar
     local function ShowButton()
         MinimizeGui.Enabled = true
@@ -168,7 +183,12 @@ function InterfaceMain:Load(Hub, Config, State)
             Size = UDim2.new(0, 55, 0, 55)
         }):Play()
         StartGlowPulse()
+        KeepTouchControlsEnabled()
     end
+
+    -- Chama uma vez já no carregamento, caso o problema apareça mesmo
+    -- antes de minimizar pela primeira vez.
+    KeepTouchControlsEnabled()
 
     -- Esconder
     local function HideButton()
