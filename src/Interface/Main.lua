@@ -54,20 +54,8 @@ function InterfaceMain:Load(Hub, Config, State)
     AspectRatio.AspectRatio = 1
     AspectRatio.Parent = CircleButton
 
-    -- Sombra suave por trás (dá profundidade, evita o efeito "colado na tela")
-    local Shadow = Instance.new("ImageLabel")
-    Shadow.Name = "Shadow"
-    Shadow.BackgroundTransparency = 1
-    Shadow.Image = "rbxassetid://1316045217" -- soft drop-shadow padrão
-    Shadow.ImageColor3 = Color3.new(0, 0, 0)
-    Shadow.ImageTransparency = 0.5
-    Shadow.ScaleType = Enum.ScaleType.Slice
-    Shadow.SliceCenter = Rect.new(20, 20, 280, 280)
-    Shadow.Size = UDim2.new(1, 24, 1, 24)
-    Shadow.Position = UDim2.new(0.5, 0, 0.5, 4)
-    Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-    Shadow.ZIndex = 1
-    Shadow.Parent = CircleButton
+    -- (sombra removida — como filha do CircleButton ela renderizava por
+    -- cima do ícone em vez de atrás, tampando a imagem e o clique)
 
     -- Texto de fallback (aparece até a imagem carregar / se o executor não suportar)
     local FallbackLabel = Instance.new("TextLabel")
