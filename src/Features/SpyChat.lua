@@ -29,6 +29,14 @@ local function MakeDraggable(frame, handle)
 end
 
 -- [ FUNÇÃO: ADICIONAR MENSAGEM ]
+local function EscapeRichText(s)
+    -- Sem isso, uma mensagem com < ou > quebra a formatação RichText do
+    -- próprio painel de log (só afeta sua tela, mas ainda é um bug visual).
+    s = tostring(s)
+    s = s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub("\"", "&quot;")
+    return s
+end
+
 function SpyChat:LogMessage(pName, msg)
     if not self.Gui or not self.Enabled then return end
     local scroll = self.Gui.Main.Content.Scroll
@@ -43,7 +51,10 @@ function SpyChat:LogMessage(pName, msg)
     label.Font = Enum.Font.Code
     label.TextSize = 14
     label.TextColor3 = Color3.new(1,1,1)
-    label.Text = string.format("<font color='#AAAAAA'>[%s]</font> <font color='#00E5FF'><b>%s:</b></font> %s", os.date("%X"), pName, msg)
+    label.Text = string.format(
+        "<font color='#AAAAAA'>[%s]</font> <font color='#00E5FF'><b>%s:</b></font> %s",
+        os.date("%X"), EscapeRichText(pName), EscapeRichText(msg)
+    )
     label.AutomaticSize = Enum.AutomaticSize.Y
     label.TextWrapped = true
 end
@@ -133,15 +144,19 @@ function SpyChat:Toggle(state)
         layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 5)
 
         -- [ CAPTURA DE CHAT ]
-        local function hook(p)
-            local c = p.Chatted:Connect(function(m) self:LogMessage(p.Name, m) end)
-            table.insert(self.Connections, c)
-        end
-        for _, p in pairs(Players:GetPlayers()) do hook(p) end
-        table.insert(self.Connections, Players.PlayerAdded:Connect(hook))
+        -- Em jogos que já usam TextChatService, Player.Chatted normalmente
+        -- ainda dispara por compatibilidade — hookar os dois duplicava
+        -- cada mensagem no log. Agora é um ou outro, nunca os dois.
+        local usingTextChatService = TextChatService.ChatVersion == Enum.ChatVersion.TextChatService
 
-        -- TextChatService (Jogos Novos)
-        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+        if not usingTextChatService then
+            local function hook(p)
+                local c = p.Chatted:Connect(function(m) self:LogMessage(p.Name, m) end)
+                table.insert(self.Connections, c)
+            end
+            for _, p in pairs(Players:GetPlayers()) do hook(p) end
+            table.insert(self.Connections, Players.PlayerAdded:Connect(hook))
+        else
             local c = TextChatService.MessageReceived:Connect(function(res)
                 if res.TextSource then self:LogMessage(res.TextSource.DisplayName, res.Text) end
             end)
