@@ -34,6 +34,21 @@ function Tab:Render(WindowTab, Hub, Config, State)
         Callback = function(v) Config.StartNum = tonumber(v) or 0 end
     })
 
+    -- Sem isso, o AutoTrain quebrava: ele faz Config.StartNum + Config.Quantity,
+    -- e Quantity nunca era definido em lugar nenhum (ficava nil).
+    WindowTab:AddInput("Quantity", {
+        Title = "Quantidade de Números",
+        Default = "50",
+        Callback = function(v) Config.Quantity = tonumber(v) or 50 end
+    })
+    Config.Quantity = Config.Quantity or 50
+
+    WindowTab:AddToggle("IsCountdown", {
+        Title = "Contagem Regressiva",
+        Default = false,
+        Callback = function(v) Config.IsCountdown = v end
+    })
+
     WindowTab:AddSlider("TrainDelay", {
         Title = "Velocidade (Delay)",
         Min = 0.5, Max = 5, Default = 1.4, Rounding = 1,
