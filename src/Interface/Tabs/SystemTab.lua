@@ -13,15 +13,10 @@ function Tab:Render(WindowTab, Hub, Config, State)
         end
     })
 
-    WindowTab:AddDropdown("Theme", {
-        Title = "Tema da Interface",
-        Values = {"Dark", "Darker", "Light", "Aqua", "Amethyst"},
-        Default = Config.UITheme or "Darker",
-        Callback = function(v) 
-            Hub.UI.Window:SetTheme(v) 
-            Config.UITheme = v 
-        end
-    })
+    -- O dropdown de tema não fica mais aqui: era manual e chamava
+    -- Hub.UI.Window:SetTheme(v), método que não existe na Fluent. A troca
+    -- de tema de verdade é construída pelo addon InterfaceManager, logo
+    -- abaixo desta seção (veja Interface/Main.lua).
 
     WindowTab:AddSection("Utilitários")
     WindowTab:AddButton({ Title = "⚡ FPS BOOST", Callback = function() Utils:AntiLag() end })
