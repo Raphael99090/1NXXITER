@@ -132,92 +132,43 @@ function InterfaceMain:Load(Hub, Config, State)
     -- Clique para restaurar
     CircleButton.MouseButton1Click:Connect(function()
         if dragging then return end
-        isMinimized = false
-        Window:Minimize(false)
-        HideButton()
+        Window:Minimize(false) -- o hook acima já atualiza isMinimized e esconde a bolinha
     end)
 
     -- ============================================================
-    -- DETECÇÃO VIA VERIFICAÇÃO DIRETA DO GUI DA FLUENT
+    -- DETECÇÃO VIA HOOK DIRETO NO Window:Minimize
     -- ============================================================
+    -- Em vez de adivinhar qual Frame é o principal (frágil: a v3 da
+    -- Fluent anima minimize/restore e pode nem tocar em .Visible),
+    -- interceptamos o próprio método que a Fluent usa internamente
+    -- (inclusive quando o usuário aperta o MinimizeKey = LeftControl).
 
-    -- Aguarda o GUI da Fluent ser criado
-    local fluentGui = nil
-    local mainFrame = nil
+    local OriginalMinimize = Window.Minimize
 
-    task.spawn(function()
-        -- Espera o ScreenGui da Fluent aparecer
-        while not fluentGui do
-            fluentGui = PlayerGui:FindFirstChild("Fluent")
-            task.wait(0.1)
+    Window.Minimize = function(self, ...)
+        local result = OriginalMinimize(self, ...)
+
+        -- Descobre o novo estado real da janela após a chamada.
+        -- A Fluent aceita Minimize(true/false); se vier sem argumento
+        -- (toggle via keybind), consultamos uma flag própria conhecida
+        -- da lib como fallback, senão alternamos o nosso próprio estado.
+        local arg = ...
+        local nowMinimized
+        if arg == true or arg == false then
+            nowMinimized = arg
+        else
+            nowMinimized = not isMinimized
         end
 
-        -- Procura o frame principal (geralmente é o maior frame)
-        local function FindMainFrame()
-            for _, child in pairs(fluentGui:GetDescendants()) do
-                if child:IsA("Frame") and child.Name ~= "Notification" then
-                    -- O frame principal geralmente tem um tamanho grande
-                    local size = child.AbsoluteSize
-                    if size.X > 400 and size.Y > 300 then
-                        return child
-                    end
-                end
-            end
-            return nil
-        end
-
-        -- Aguarda o frame principal carregar
-        while not mainFrame do
-            mainFrame = FindMainFrame()
-            task.wait(0.2)
-        end
-
-        -- Monitora mudanças de visibilidade
-        mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
-            local visible = mainFrame.Visible
-            if not visible and not isMinimized then
-                isMinimized = true
-                ShowButton()
-            elseif visible and isMinimized then
-                isMinimized = false
-                HideButton()
-            end
-        end)
-
-        -- Verificação inicial
-        if not mainFrame.Visible then
-            isMinimized = true
+        isMinimized = nowMinimized
+        if isMinimized then
             ShowButton()
+        else
+            HideButton()
         end
-    end)
 
-    -- Fallback: se o GUI mudar de nome ou estrutura
-    PlayerGui.ChildAdded:Connect(function(child)
-        if child.Name == "Fluent" and child:IsA("ScreenGui") then
-            fluentGui = child
-            task.wait(0.5)
-            -- Re-procura o frame
-            for _, descendant in pairs(child:GetDescendants()) do
-                if descendant:IsA("Frame") then
-                    local size = descendant.AbsoluteSize
-                    if size.X > 400 and size.Y > 300 then
-                        mainFrame = descendant
-                        mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
-                            local visible = mainFrame.Visible
-                            if not visible and not isMinimized then
-                                isMinimized = true
-                                ShowButton()
-                            elseif visible and isMinimized then
-                                isMinimized = false
-                                HideButton()
-                            end
-                        end)
-                        break
-                    end
-                end
-            end
-        end
-    end)
+        return result
+    end
 
     -- [3] ESTRUTURA DE ABAS
     local Tabs = {
