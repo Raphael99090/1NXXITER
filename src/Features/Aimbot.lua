@@ -65,7 +65,7 @@ end
 
 local wasAiming = false
 
-RunService.RenderStepped:Connect(function(dt)
+Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
     -- Sempre pega a câmera atual (não cacheada) — se o jogo trocar a
     -- CurrentCamera em algum momento, a feature não fica "morta" em silêncio.
     local Camera = Workspace.CurrentCamera
@@ -113,5 +113,13 @@ RunService.RenderStepped:Connect(function(dt)
         wasAiming = false
     end
 end)
+
+function Aimbot:Unload()
+    self.Settings.Enabled = false
+    if self._conn then self._conn:Disconnect() self._conn = nil end
+    local Camera = Workspace.CurrentCamera
+    if Camera then Camera.CameraType = Enum.CameraType.Custom end
+    if FOVCircle then FOVCircle:Remove() end
+end
 
 return Aimbot
