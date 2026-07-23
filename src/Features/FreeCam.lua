@@ -1,11 +1,22 @@
 local FreeCam = {}
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
 FreeCam.Settings = { Enabled = false, Speed = 1, Sensitivity = 0.5 }
 local Conn = nil
 local LookConn = nil
 local Rot = Vector2.new(0, 0)
+
+-- Mesmo problema do Aimbot: CameraType Scriptable faz o Roblox desligar
+-- o joystick de andar sozinho. Forçamos ele de volta.
+local function KeepTouchControlsEnabled()
+    pcall(function()
+        local PlayerModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
+        PlayerModule:GetControls():Enable()
+    end)
+end
 
 -- GetMouseDelta só existe com mouse. Em touch (celular), a rotação da
 -- câmera passa a vir do arrasto na tela — sem isso, FreeCam só funcionava no PC.
@@ -19,6 +30,7 @@ function FreeCam:Toggle(state)
 
     if state then
         Camera.CameraType = Enum.CameraType.Scriptable
+        KeepTouchControlsEnabled() -- sem isso o joystick de andar some no celular
         Rot = Vector2.new(0, 0)
         touchDelta = Vector2.new(0, 0)
         lastTouchPos = nil
