@@ -67,4 +67,8 @@ function FreeCam:Toggle(state)
     end
 end
 
+function FreeCam:Unload()
+    self:Toggle(false)
+end
+
 return FreeCam
