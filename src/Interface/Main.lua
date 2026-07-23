@@ -40,14 +40,36 @@ function InterfaceMain:Load(Hub, Config, State)
     CircleButton.Name = "RestoreButton"
     CircleButton.Size = UDim2.new(0, 55, 0, 55)
     CircleButton.Position = UDim2.new(1, -75, 0, 25)
-    CircleButton.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
+    CircleButton.BackgroundColor3 = Color3.fromRGB(40, 20, 60) -- roxo escuro, combina com a logo
     CircleButton.ScaleType = Enum.ScaleType.Crop
-    CircleButton.Image = "" -- preenchido depois pelo LoadCustomIcon, se disponível
+    CircleButton.Image = ""
+    CircleButton.ImageTransparency = 1 -- some até a imagem carregar (fade in)
     CircleButton.BorderSizePixel = 0
     CircleButton.AutoButtonColor = true
+    CircleButton.ZIndex = 2
     CircleButton.Parent = MinimizeGui
 
-    -- Texto de fallback (aparece atrás da imagem; some se a imagem carregar)
+    -- Aspect ratio: garante que ela nunca vire uma "elipse" em telas diferentes
+    local AspectRatio = Instance.new("UIAspectRatioConstraint")
+    AspectRatio.AspectRatio = 1
+    AspectRatio.Parent = CircleButton
+
+    -- Sombra suave por trás (dá profundidade, evita o efeito "colado na tela")
+    local Shadow = Instance.new("ImageLabel")
+    Shadow.Name = "Shadow"
+    Shadow.BackgroundTransparency = 1
+    Shadow.Image = "rbxassetid://1316045217" -- soft drop-shadow padrão
+    Shadow.ImageColor3 = Color3.new(0, 0, 0)
+    Shadow.ImageTransparency = 0.5
+    Shadow.ScaleType = Enum.ScaleType.Slice
+    Shadow.SliceCenter = Rect.new(20, 20, 280, 280)
+    Shadow.Size = UDim2.new(1, 24, 1, 24)
+    Shadow.Position = UDim2.new(0.5, 0, 0.5, 4)
+    Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+    Shadow.ZIndex = 1
+    Shadow.Parent = CircleButton
+
+    -- Texto de fallback (aparece até a imagem carregar / se o executor não suportar)
     local FallbackLabel = Instance.new("TextLabel")
     FallbackLabel.Name = "FallbackText"
     FallbackLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -56,7 +78,7 @@ function InterfaceMain:Load(Hub, Config, State)
     FallbackLabel.TextColor3 = Color3.new(1, 1, 1)
     FallbackLabel.TextSize = 13
     FallbackLabel.Font = Enum.Font.GothamBold
-    FallbackLabel.ZIndex = CircleButton.ZIndex - 1
+    FallbackLabel.ZIndex = 2
     FallbackLabel.Parent = CircleButton
 
     -- Circular
@@ -64,20 +86,40 @@ function InterfaceMain:Load(Hub, Config, State)
     UICorner.CornerRadius = UDim.new(1, 0)
     UICorner.Parent = CircleButton
 
-    -- Stroke
+    -- Stroke (cores da paleta roxo/dourado da logo, no lugar do vermelho genérico)
     local UIStroke = Instance.new("UIStroke")
-    UIStroke.Color = Color3.fromRGB(180, 20, 20)
+    UIStroke.Color = Color3.fromRGB(200, 160, 60)
     UIStroke.Thickness = 2
+    UIStroke.Transparency = 0
     UIStroke.Parent = CircleButton
 
     -- Gradient
     local UIGradient = Instance.new("UIGradient")
     UIGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 30, 30))
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 60, 200)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 30, 110))
     })
     UIGradient.Rotation = 45
     UIGradient.Parent = CircleButton
+
+    -- Glow pulsante no stroke enquanto minimizado (chama atenção sem irritar)
+    local glowTween = nil
+    local function StartGlowPulse()
+        if glowTween then return end
+        glowTween = TweenService:Create(
+            UIStroke,
+            TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            { Transparency = 0.7 }
+        )
+        glowTween:Play()
+    end
+    local function StopGlowPulse()
+        if glowTween then
+            glowTween:Cancel()
+            glowTween = nil
+            UIStroke.Transparency = 0
+        end
+    end
 
     -- Esconde inicialmente
     MinimizeGui.Enabled = false
@@ -86,11 +128,12 @@ function InterfaceMain:Load(Hub, Config, State)
     -- ÍCONE CUSTOMIZADO (baixado do repo)
     -- ============================================================
     -- Troque essa URL pra apontar pro seu arquivo de imagem no repo
-    local ICON_URL = "https://raw.githubusercontent.com/" .. REPO .. "/" .. BRANCH .. "/Assets/1784776415112.png"
+    local ICON_URL = "https://raw.githubusercontent.com/Raphael99090/1NXXITER/main/Assets/1784776415112.png"
 
     local function LoadCustomIcon()
         if not (writefile and getcustomasset and isfile) then
             warn("⚠️ [1NXITER]: Executor sem suporte a writefile/getcustomasset — mantendo texto '1NX'.")
+            CircleButton.ImageTransparency = 1
             return
         end
 
@@ -103,7 +146,11 @@ function InterfaceMain:Load(Hub, Config, State)
             end
             local assetId = getcustomasset(fileName)
             CircleButton.Image = assetId
-            FallbackLabel.Visible = false
+
+            -- Fade in suave em vez de trocar de repente
+            TweenService:Create(CircleButton, TweenInfo.new(0.3), { ImageTransparency = 0 }):Play()
+            TweenService:Create(FallbackLabel, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
+            task.delay(0.3, function() FallbackLabel.Visible = false end)
         end)
 
         if not ok then
@@ -122,10 +169,12 @@ function InterfaceMain:Load(Hub, Config, State)
         TweenService:Create(CircleButton, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 55, 0, 55)
         }):Play()
+        StartGlowPulse()
     end
 
     -- Esconder
     local function HideButton()
+        StopGlowPulse()
         TweenService:Create(CircleButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
             Size = UDim2.new(0, 0, 0, 0)
         }):Play()
@@ -136,9 +185,10 @@ function InterfaceMain:Load(Hub, Config, State)
         end)
     end
 
-    -- Draggable
+    -- Draggable (com snap na borda mais próxima ao soltar)
     local dragging = false
     local dragStart, startPos
+    local Camera = workspace.CurrentCamera
 
     CircleButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -166,6 +216,26 @@ function InterfaceMain:Load(Hub, Config, State)
             dragging = false
             TweenService:Create(CircleButton, TweenInfo.new(0.1), {
                 Size = UDim2.new(0, 55, 0, 55)
+            }):Play()
+
+            -- Snap na borda esquerda ou direita mais próxima da tela
+            local viewportSize = Camera and Camera.ViewportSize or Vector2.new(1920, 1080)
+            local absPos = CircleButton.AbsolutePosition
+            local absSize = CircleButton.AbsoluteSize
+            local centerX = absPos.X + absSize.X / 2
+
+            local targetX
+            if centerX < viewportSize.X / 2 then
+                targetX = 20 -- encosta na borda esquerda
+            else
+                targetX = viewportSize.X - absSize.X - 20 -- encosta na borda direita
+            end
+
+            -- Trava o Y dentro da tela também, pra nunca sair pulando fora
+            local targetY = math.clamp(absPos.Y, 10, viewportSize.Y - absSize.Y - 10)
+
+            TweenService:Create(CircleButton, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0, targetX, 0, targetY)
             }):Play()
         end
     end)
