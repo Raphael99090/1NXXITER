@@ -4,9 +4,20 @@
     Repositório: 1NXXITER
 ]]
 
--- [1] SEGURANÇA: Evita carregar o script duas vezes
-if getgenv().InxiterHubLoaded then 
-    return warn("⚠️ [1NXITER]: O Hub já está em execução!") 
+-- [1] SEGURANÇA: Evita duas instâncias rodando ao mesmo tempo.
+-- Antes disso só abortava com um warn — mas em teste/hot-reload isso deixava
+-- a instância antiga (aimbot, noclip, FOV esticado, etc.) rodando pra sempre
+-- em paralelo com a nova. Agora ele desliga a antiga de verdade primeiro.
+if getgenv().InxiterHubLoaded and getgenv().InxiterHubInstance then
+    warn("♻️ [1NXITER]: Instância anterior detectada — desligando antes de recarregar...")
+    local ok, err = pcall(function()
+        getgenv().InxiterHubInstance:Unload()
+    end)
+    if not ok then
+        warn("⚠️ [1NXITER]: Erro ao desligar instância anterior -> " .. tostring(err))
+    end
+    getgenv().InxiterHubLoaded = false
+    getgenv().InxiterHubInstance = nil
 end
 
 -- [2] CONFIGURAÇÃO DE LINKS
@@ -121,6 +132,26 @@ local Hub = {
     }
 }
 
+-- Desliga tudo: todas as features com Unload() e a UI (janela + bolinha).
+-- Usado no hot-reload acima e no botão "FECHAR HUB" do SystemTab.
+function Hub:Unload()
+    for name, feature in pairs(self.Features) do
+        if type(feature) == "table" and feature.Unload then
+            local ok, err = pcall(function() feature:Unload() end)
+            if not ok then
+                warn("⚠️ [1NXITER]: Erro ao descarregar Features/" .. name .. " -> " .. tostring(err))
+            end
+        end
+    end
+
+    if self.UI.Window and self.UI.Window.Destroy then
+        pcall(function() self.UI.Window:Destroy() end)
+    end
+    if self.UI.MinimizeGui then
+        pcall(function() self.UI.MinimizeGui:Destroy() end)
+    end
+end
+
 -- [4] FUNÇÃO IMPORT (O coração do Loader)
 -- Esta função baixa o código do GitHub, compila e retorna o módulo
 local function Import(path)
@@ -191,8 +222,10 @@ local function Start()
 
     print("✅ [1NXITER]: Todos os módulos carregados. Iniciando sistema...")
     
-    -- Marca o Hub como carregado
+    -- Marca o Hub como carregado e guarda a instância pra um futuro
+    -- reload conseguir chamar Hub:Unload() nela antes de subir a nova.
     getgenv().InxiterHubLoaded = true
+    getgenv().InxiterHubInstance = Hub
 
     -- Carrega as configurações salvas no JSON do celular
     local Config = Hub.Core.State:LoadConfig()
