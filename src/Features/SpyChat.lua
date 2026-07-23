@@ -169,4 +169,8 @@ function SpyChat:Toggle(state)
     end
 end
 
+function SpyChat:Unload()
+    self:Toggle(false)
+end
+
 return SpyChat
