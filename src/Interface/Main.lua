@@ -174,57 +174,78 @@ function InterfaceMain:Load(Hub, Config, State)
     end
 
     -- Draggable (com snap na borda mais próxima ao soltar)
-    local dragging = false
+    -- IMPORTANTE: só passa a "arrastar" de verdade depois de um limiar
+    -- mínimo de movimento. Sem isso, o micro-tremor natural de qualquer
+    -- toque já reposicionava o botão, e o Roblox deixava de reconhecer
+    -- aquilo como clique nativo (MouseButton1Click nunca disparava).
+    local DRAG_THRESHOLD = 6 -- pixels
+    local dragging = false          -- true enquanto o dedo/mouse está apertado
+    local dragThresholdExceeded = false -- true só quando passou do limiar (arrasto real)
+    local wasDragged = false        -- lido pelo MouseButton1Click, resetado depois
     local dragStart, startPos
     local Camera = workspace.CurrentCamera
 
     CircleButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
+            dragThresholdExceeded = false
             dragStart = input.Position
             startPos = CircleButton.Position
-            TweenService:Create(CircleButton, TweenInfo.new(0.1), {
-                Size = UDim2.new(0, 48, 0, 48)
-            }):Play()
         end
     end)
 
     CircleButton.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
-            CircleButton.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
+
+            if not dragThresholdExceeded and delta.Magnitude > DRAG_THRESHOLD then
+                dragThresholdExceeded = true
+                TweenService:Create(CircleButton, TweenInfo.new(0.1), {
+                    Size = UDim2.new(0, 48, 0, 48)
+                }):Play()
+            end
+
+            if dragThresholdExceeded then
+                CircleButton.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + delta.X,
+                    startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                )
+            end
         end
     end)
 
     CircleButton.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
-            TweenService:Create(CircleButton, TweenInfo.new(0.1), {
-                Size = UDim2.new(0, 55, 0, 55)
-            }):Play()
+            wasDragged = dragThresholdExceeded
 
-            -- Snap na borda esquerda ou direita mais próxima da tela
-            local viewportSize = Camera and Camera.ViewportSize or Vector2.new(1920, 1080)
-            local absPos = CircleButton.AbsolutePosition
-            local absSize = CircleButton.AbsoluteSize
-            local centerX = absPos.X + absSize.X / 2
+            if dragThresholdExceeded then
+                TweenService:Create(CircleButton, TweenInfo.new(0.1), {
+                    Size = UDim2.new(0, 55, 0, 55)
+                }):Play()
 
-            local targetX
-            if centerX < viewportSize.X / 2 then
-                targetX = 20 -- encosta na borda esquerda
-            else
-                targetX = viewportSize.X - absSize.X - 20 -- encosta na borda direita
+                -- Snap na borda esquerda ou direita mais próxima da tela
+                local viewportSize = Camera and Camera.ViewportSize or Vector2.new(1920, 1080)
+                local absPos = CircleButton.AbsolutePosition
+                local absSize = CircleButton.AbsoluteSize
+                local centerX = absPos.X + absSize.X / 2
+
+                local targetX
+                if centerX < viewportSize.X / 2 then
+                    targetX = 20 -- encosta na borda esquerda
+                else
+                    targetX = viewportSize.X - absSize.X - 20 -- encosta na borda direita
+                end
+
+                -- Trava o Y dentro da tela também, pra nunca sair pulando fora
+                local targetY = math.clamp(absPos.Y, 10, viewportSize.Y - absSize.Y - 10)
+
+                TweenService:Create(CircleButton, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = UDim2.new(0, targetX, 0, targetY)
+                }):Play()
             end
 
-            -- Trava o Y dentro da tela também, pra nunca sair pulando fora
-            local targetY = math.clamp(absPos.Y, 10, viewportSize.Y - absSize.Y - 10)
-
-            TweenService:Create(CircleButton, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(0, targetX, 0, targetY)
-            }):Play()
+            dragThresholdExceeded = false
         end
     end)
 
@@ -236,7 +257,10 @@ function InterfaceMain:Load(Hub, Config, State)
     local VirtualInputManager = game:GetService("VirtualInputManager")
 
     CircleButton.MouseButton1Click:Connect(function()
-        if dragging then return end
+        if wasDragged then
+            wasDragged = false
+            return
+        end
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
         task.wait(0.05)
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
