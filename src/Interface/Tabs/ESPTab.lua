@@ -4,7 +4,7 @@ function Tab:Render(WindowTab, Hub, Config)
     local Mod = Hub.Features.ESP
     local Players = game:GetService("Players")
 
-    WindowTab:Section({ Title = "Chams" })
+    WindowTab:Section({ Title = "Chams", Icon = "eye" })
 
     local Status = WindowTab:Section({ Title = "Jogadores detectados", Desc = "ESP desligado" })
 
@@ -20,10 +20,10 @@ function Tab:Render(WindowTab, Hub, Config)
         end
     end)
 
-    WindowTab:Toggle({ Flag = "ESPE", Title = "Ativar Chams", Value = false, Callback = function(v) Mod:Toggle(v) end })
+    WindowTab:Toggle({ Flag = "ESPE", Title = "Ativar Chams", Icon = "eye", Value = false, Callback = function(v) Mod:Toggle(v) end })
     WindowTab:Toggle({
         Flag = "ESPT",
-        Title = "Ocultar Aliados",
+        Title = "Ocultar Aliados", Icon = "user-round-x",
         Value = false,
         Callback = function(v)
             Mod.Settings.TeamCheck = v
@@ -41,9 +41,9 @@ function Tab:Render(WindowTab, Hub, Config)
         end
     })
 
-    WindowTab:Section({ Title = "Extras" })
-    WindowTab:Toggle({ Flag = "ESPTracer", Title = "Tracers (linha até o jogador)", Value = false, Callback = function(v) Mod.Settings.Tracers = v end })
-    WindowTab:Toggle({ Flag = "ESPDist", Title = "Mostrar Distância", Value = false, Callback = function(v) Mod.Settings.Distance = v end })
+    WindowTab:Section({ Title = "Extras", Icon = "sparkles" })
+    WindowTab:Toggle({ Flag = "ESPTracer", Title = "Tracers (linha até o jogador)", Icon = "route", Value = false, Callback = function(v) Mod.Settings.Tracers = v end })
+    WindowTab:Toggle({ Flag = "ESPDist", Title = "Mostrar Distância", Icon = "ruler", Value = false, Callback = function(v) Mod.Settings.Distance = v end })
 end
 
 return Tab
