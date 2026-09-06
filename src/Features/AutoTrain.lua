@@ -3,6 +3,10 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
 function AutoTrain:Toggle(Config, State, Hub, updateUI)
+    -- Guarda a referência do State: sem isso, Unload() não tinha como
+    -- parar o loop que já estava rodando em segundo plano (task.spawn).
+    self._state = State
+
     if State.IsRunning then 
         State.IsRunning = false 
         if updateUI then updateUI("STATUS: PAUSADO") end
@@ -45,6 +49,18 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
 
         State.IsRunning = false
     end)
+end
+
+-- Antes o AutoTrain não tinha Unload nenhum: Hub:Unload() só chama Unload()
+-- nas features que o definem, então um treino em andamento sobrevivia ao
+-- "FECHAR HUB" e continuava mandando mensagem no chat pra sempre, sem UI
+-- pra pausar. IsActive no State também nunca era setado false em lugar
+-- nenhum, então aquele check já existente no loop nunca disparava de verdade.
+function AutoTrain:Unload()
+    if self._state then
+        self._state.IsRunning = false
+        self._state.IsActive = false
+    end
 end
 
 return AutoTrain

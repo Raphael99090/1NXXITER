@@ -7,7 +7,10 @@ local LocalPlayer = Players.LocalPlayer
 FreeCam.Settings = { Enabled = false, Speed = 1, Sensitivity = 0.5 }
 local Conn = nil
 local LookConn = nil
+local TouchEndConn = nil -- antes não era guardada: cada Toggle(true) criava uma nova sem nunca desconectar a anterior
 local Rot = Vector2.new(0, 0)
+
+local MAX_PITCH = math.rad(89) -- sem isso a câmera passa da vertical e "vira de cabeça pra baixo"
 
 -- Mesmo problema do Aimbot: CameraType Scriptable faz o Roblox desligar
 -- o joystick de andar sozinho. Forçamos ele de volta.
@@ -44,7 +47,7 @@ function FreeCam:Toggle(state)
             end
         end)
 
-        UserInputService.TouchEnded:Connect(function()
+        TouchEndConn = UserInputService.TouchEnded:Connect(function()
             lastTouchPos = nil
         end)
 
@@ -59,6 +62,7 @@ function FreeCam:Toggle(state)
             end
 
             Rot = Rot + (delta * -0.005 * self.Settings.Sensitivity)
+            Rot = Vector2.new(Rot.X, math.clamp(Rot.Y, -MAX_PITCH, MAX_PITCH))
             cam.CFrame = CFrame.new(cam.CFrame.Position) * CFrame.Angles(0, Rot.X, 0) * CFrame.Angles(Rot.Y, 0, 0)
 
             local move = Vector3.new()
@@ -75,6 +79,7 @@ function FreeCam:Toggle(state)
     else
         if Conn then Conn:Disconnect() Conn = nil end
         if LookConn then LookConn:Disconnect() LookConn = nil end
+        if TouchEndConn then TouchEndConn:Disconnect() TouchEndConn = nil end
         Camera.CameraType = Enum.CameraType.Custom
     end
 end

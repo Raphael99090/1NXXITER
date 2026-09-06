@@ -26,14 +26,97 @@ local BRANCH = "main"
 local BASE_URL = "https://raw.githubusercontent.com/" .. REPO .. "/" .. BRANCH .. "/src/"
 
 -- ======================================================
--- [1.5] SISTEMA DE KEY (fixa, só pra teste)
+-- [1.5] SISTEMA DE KEY (via site — /api/validate)
 -- ======================================================
--- IMPORTANTE: isso é só um teste. Uma key fixa dentro do código é
--- trivialmente extraível (basta ler o script), então qualquer um
--- que pegue o arquivo consegue achar a KEY sem nem precisar dela.
--- Serve só pra validar o fluxo de UI antes de trocar por algo real
--- (endpoint próprio, verificação de membro do Discord, etc).
-local KEY = "1NX-2026"
+-- Troca a key fixa por checagem real contra o site de vendas. O HWID vai
+-- junto: o servidor vincula automaticamente no primeiro uso e recusa se
+-- um HWID diferente tentar usar a mesma key depois (até resetar no painel).
+--
+-- ⚠️ TROQUE ESSA URL pelo domínio real onde o site (1nxiter-site) estiver
+-- hospedado, com HTTPS — a maioria dos executores recusa HTTP puro.
+local VALIDATE_URL = "https://SEU-DOMINIO-AQUI/api/validate"
+
+-- ======================================================
+-- 🧪 MODO DE TESTE — REMOVA ANTES DE PUBLICAR
+-- ======================================================
+-- Enquanto o site não tá no ar (VALIDATE_URL ainda é o placeholder), isso
+-- deixa testar o resto do hub sem precisar bater no servidor de verdade.
+-- Com TESTING_MODE = true, qualquer key igual a TEST_KEY passa direto,
+-- sem gastar request nem precisar do site rodando.
+--
+-- MUDE PRA false (ou apague esse bloco inteiro) antes de mandar o script
+-- pros seus compradores — com isso ligado, QUALQUER PESSOA que descobrir
+-- o TEST_KEY entra de graça, sem pagar e sem key de verdade.
+local TESTING_MODE = true
+local TEST_KEY = "TESTE-1NX"
+
+if TESTING_MODE then
+    warn("🧪 [1NXITER]: MODO DE TESTE ATIVO — key '" .. TEST_KEY .. "' libera sem checar o site. Desliga TESTING_MODE antes de publicar!")
+end
+
+local function GetHWID()
+    local ok, id = pcall(function()
+        if gethwid then return gethwid() end
+        if get_hwid then return get_hwid() end
+        if identifyexecutor then
+            local name = identifyexecutor()
+            return "id-" .. tostring(name) .. "-" .. tostring(game:GetService("RbxAnalyticsService"):GetClientId())
+        end
+        return game:GetService("RbxAnalyticsService"):GetClientId()
+    end)
+    return ok and tostring(id) or "unknown-hwid"
+end
+
+local function CheckKey(key, callback)
+    if TESTING_MODE then
+        if key == TEST_KEY then
+            callback(true)
+        else
+            callback(false, "Key inválida. (Modo de teste: use \"" .. TEST_KEY .. "\")")
+        end
+        return
+    end
+
+    local httpRequest = (syn and syn.request) or http_request or request
+    if not httpRequest then
+        callback(false, "Seu executor não suporta requisições HTTP (precisa de http_request/syn.request).")
+        return
+    end
+    local ok, response = pcall(function()
+        return httpRequest({
+            Url = VALIDATE_URL,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = game:GetService("HttpService"):JSONEncode({ key = key, hwid = GetHWID() }),
+        })
+    end)
+    if not ok or not response or not response.Body then
+        callback(false, "Não deu pra falar com o servidor. Confere sua internet e tenta de novo.")
+        return
+    end
+    local decodeOk, data = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(response.Body)
+    end)
+    if not decodeOk or type(data) ~= "table" then
+        callback(false, "Resposta inválida do servidor.")
+        return
+    end
+    if data.valid then
+        callback(true)
+    else
+        -- Mensagens amigáveis por reason — o site nunca manda detalhe
+        -- técnico demais de propósito (evita virar guia de bypass).
+        local reasons = {
+            key_invalid = "Key inválida.",
+            expired = "Sua key expirou. Renove no site.",
+            revoked = "Essa key foi revogada.",
+            hwid_missing = "Não foi possível identificar seu dispositivo (HWID).",
+            hwid_mismatch = "Essa key já está vinculada a outro dispositivo. Resete o HWID no seu painel do site.",
+            rate_limited = "Muitas tentativas seguidas. Espera um minuto e tenta de novo.",
+        }
+        callback(false, reasons[data.reason] or "Key inválida.")
+    end
+end
 
 local function RequestKey(onSuccess)
     local Players = game:GetService("Players")
@@ -106,14 +189,33 @@ local function RequestKey(onSuccess)
     ErrorLabel.TextSize = 12
     ErrorLabel.Parent = Frame
 
+    -- Trava o botão + input durante a checagem, pra não disparar duas
+    -- requisições em paralelo se o jogador clicar/apertar Enter rápido.
+    local checking = false
+
     local function TryKey()
-        if Input.Text == KEY then
-            KeyGui:Destroy()
-            onSuccess()
-        else
-            ErrorLabel.Text = "Key inválida. Tenta de novo."
-            Input.Text = ""
+        if checking then return end
+        local keyText = Input.Text
+        if keyText == "" then
+            ErrorLabel.Text = "Cola sua key aí antes de confirmar."
+            return
         end
+
+        checking = true
+        Confirm.Text = "Verificando..."
+        ErrorLabel.Text = ""
+
+        CheckKey(keyText, function(valid, errorMsg)
+            checking = false
+            if valid then
+                KeyGui:Destroy()
+                onSuccess()
+            else
+                Confirm.Text = "Confirmar"
+                ErrorLabel.Text = errorMsg or "Key inválida. Tenta de novo."
+                Input.Text = ""
+            end
+        end)
     end
 
     Confirm.MouseButton1Click:Connect(TryKey)
@@ -132,8 +234,11 @@ local Hub = {
     }
 }
 
--- Desliga tudo: todas as features com Unload() e a UI (janela + bolinha).
+-- Desliga tudo: todas as features com Unload() e a UI (janela).
 -- Usado no hot-reload acima e no botão "FECHAR HUB" do SystemTab.
+-- A WindUI:Destroy() já cuida da janela E do botão flutuante (OpenButton)
+-- juntos — não existe mais um MinimizeGui separado pra destruir à parte
+-- como existia com o hack de bolinha customizada da Fluent.
 function Hub:Unload()
     for name, feature in pairs(self.Features) do
         if type(feature) == "table" and feature.Unload then
@@ -146,9 +251,6 @@ function Hub:Unload()
 
     if self.UI.Window and self.UI.Window.Destroy then
         pcall(function() self.UI.Window:Destroy() end)
-    end
-    if self.UI.MinimizeGui then
-        pcall(function() self.UI.MinimizeGui:Destroy() end)
     end
 end
 
@@ -230,6 +332,9 @@ local function Start()
     -- Carrega as configurações salvas no JSON do celular
     local Config = Hub.Core.State:LoadConfig()
     local RuntimeState = Hub.Core.State:GetRuntimeState()
+
+    -- Salva sozinho em segundo plano (respeita Config.AutoSave)
+    Hub.Core.State:StartAutoSave(Config, 8)
 
     -- Inicia funções de fundo (Anti-AFK, Auto-Rejoin, etc)
     if Hub.Core.Utils then

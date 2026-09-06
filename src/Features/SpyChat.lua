@@ -10,22 +10,36 @@ SpyChat.Minimized = false
 SpyChat.Connections = {}
 
 -- [ AUXILIAR: ARRASTE ]
+-- Antes conectava direto em UserInputService.InputChanged sem guardar a conexão:
+-- toda vez que Toggle(true) recriava a UI, uma nova conexão global era empilhada
+-- por cima das antigas, que nunca eram desconectadas (vazamento a cada toggle).
+-- Agora devolve as conexões pra quem chamou registrar em self.Connections.
 local function MakeDraggable(frame, handle)
-    local dragging, dragInput, dragStart, startPos
-    handle.InputBegan:Connect(function(input)
+    local dragging, dragStart, startPos
+    local conns = {}
+
+    table.insert(conns, handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true; dragStart = input.Position; startPos = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            local changedConn
+            changedConn = input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    if changedConn then changedConn:Disconnect() end
+                end
             end)
+            table.insert(conns, changedConn)
         end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
+    end))
+
+    table.insert(conns, UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
             frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
-    end)
+    end))
+
+    return conns
 end
 
 -- [ FUNÇÃO: ADICIONAR MENSAGEM ]
@@ -90,7 +104,9 @@ function SpyChat:Toggle(state)
         top.Size = UDim2.new(1, 0, 0, 30)
         top.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
         top.BorderSizePixel = 0
-        MakeDraggable(main, top)
+        for _, c in pairs(MakeDraggable(main, top)) do
+            if c then table.insert(self.Connections, c) end
+        end
 
         local title = Instance.new("TextLabel", top)
         title.Text = "  CHAT LOGS (HD ADMIN STYLE)"

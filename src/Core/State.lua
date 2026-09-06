@@ -46,6 +46,14 @@ local function DeepMerge(target, source)
     return target
 end
 
+local function DeepCopy(t)
+    local copy = {}
+    for k, v in pairs(t) do
+        copy[k] = (type(v) == "table") and DeepCopy(v) or v
+    end
+    return copy
+end
+
 function StateManager:GetRuntimeState()
     return RuntimeState
 end
@@ -78,6 +86,49 @@ function StateManager:SaveConfig(currentConfig)
     end)
     
     return ok
+end
+
+-- Devolve os padrões de fábrica (cópia — nunca a tabela original, pra
+-- ninguém acidentalmente editar DefaultConfig em runtime).
+function StateManager:GetDefaults()
+    return DeepCopy(DefaultConfig)
+end
+
+-- Restaura o config atual pros valores padrão, em cima da MESMA tabela
+-- (os callbacks de cada Tab já guardam essa referência via closure — se
+-- trocássemos por uma tabela nova, os toggles/sliders continuariam
+-- escrevendo na tabela velha).
+function StateManager:ResetConfig(config)
+    for k, v in pairs(DefaultConfig) do
+        config[k] = v
+    end
+    return config
+end
+
+-- [ AUTO-SAVE ]
+-- Config.AutoSave já existia como flag desde sempre, mas nada no projeto
+-- realmente lia esse valor — o único jeito de salvar era clicar no botão
+-- manual. Isso roda em segundo plano e salva sozinho quando algo muda,
+-- só enquanto o hub estiver de fato carregado (getgenv().InxiterHubLoaded).
+function StateManager:StartAutoSave(config, intervalSeconds)
+    if not HasFileSystem() then return end
+    intervalSeconds = intervalSeconds or 8
+
+    task.spawn(function()
+        local lastSnapshot = nil
+        while getgenv().InxiterHubLoaded do
+            task.wait(intervalSeconds)
+            if not getgenv().InxiterHubLoaded then break end
+            if config.AutoSave then
+                local encodeOk, snapshot = pcall(HttpService.JSONEncode, HttpService, config)
+                if encodeOk and snapshot ~= lastSnapshot then
+                    if self:SaveConfig(config) then
+                        lastSnapshot = snapshot
+                    end
+                end
+            end
+        end
+    end)
 end
 
 return StateManager

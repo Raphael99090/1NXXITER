@@ -27,8 +27,29 @@ Aimbot.Settings = {
     Smoothness = 0.5,
     TargetPart = "HumanoidRootPart",
     HitboxExpander = false,
-    HitboxSize = 10
+    HitboxSize = 10,
+    SilentAim = false, -- trava o alvo sem girar a câmera (ver nota abaixo)
+    Priority = "Closest", -- "Closest" (mais perto da mira) ou "LowHealth" (menor vida)
+    AimKeyOnly = false, -- só mira enquanto segura AimKey, em vez de sempre que tiver alvo
+    AimKey = Enum.KeyCode.E
 }
+
+-- Marcador do alvo travado, só aparece no modo Silent Aim (pra ainda dar
+-- um retorno visual de quem tá marcado, já que a câmera não se mexe).
+local LockMarker = nil
+do
+    local ok, circle = pcall(function()
+        local c = Drawing.new("Circle")
+        c.Color = Color3.fromRGB(255, 60, 60)
+        c.Thickness = 2
+        c.Radius = 10
+        c.Filled = false
+        c.NumSides = 3
+        c.Visible = false
+        return c
+    end)
+    if ok then LockMarker = circle end
+end
 
 local FOVCircle = nil
 do
@@ -51,8 +72,8 @@ local function IsVisible(part, camera)
 end
 
 local function GetTarget(camera)
-    local closestDist = Aimbot.Settings.FOVRadius
     local target = nil
+    local bestScore = nil
     local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
 
     for _, p in pairs(Players:GetPlayers()) do
@@ -64,10 +85,22 @@ local function GetTarget(camera)
             
             if onScreen then
                 local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                if dist < closestDist then
+                if dist < Aimbot.Settings.FOVRadius then
                     if Aimbot.Settings.WallCheck and not IsVisible(part, camera) then continue end
-                    closestDist = dist
-                    target = part
+
+                    -- "Closest" pontua por distância até a mira (menor = melhor,
+                    -- igual sempre foi). "LowHealth" pontua pela vida atual —
+                    -- ainda só considera quem tá dentro do FOV e visível.
+                    local score = dist
+                    if Aimbot.Settings.Priority == "LowHealth" then
+                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                        score = hum and hum.Health or math.huge
+                    end
+
+                    if not bestScore or score < bestScore then
+                        bestScore = score
+                        target = part
+                    end
                 end
             end
         end
@@ -76,6 +109,8 @@ local function GetTarget(camera)
 end
 
 local wasAiming = false
+Aimbot.IsAiming = false -- exposto pra UI poder mostrar status ao vivo (CombatTab)
+Aimbot.LockedTarget = nil -- exposto pra UI/outras features saberem quem tá marcado
 
 Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
     -- Sempre pega a câmera atual (não cacheada) — se o jogo trocar a
@@ -103,8 +138,33 @@ Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
 
     -- Aimbot Logic
     if Aimbot.Settings.Enabled then
-        local target = GetTarget(Camera)
-        if target then
+        -- Com AimKeyOnly ligado, só busca alvo enquanto a tecla tá
+        -- segurada — soltou, cai igualzinho no caminho de "sem alvo"
+        -- logo abaixo (devolve a câmera pro jogador).
+        local keyOk = not Aimbot.Settings.AimKeyOnly or UserInputService:IsKeyDown(Aimbot.Settings.AimKey)
+        local target = keyOk and GetTarget(Camera) or nil
+        Aimbot.LockedTarget = target
+
+        if target and Aimbot.Settings.SilentAim then
+            -- SILENT AIM: só marca o alvo internamente (LockedTarget/IsAiming)
+            -- e desenha um indicador na tela — a câmera fica 100% livre na
+            -- sua mão, nunca gira sozinha. Não existe um hook de disparo
+            -- genérico pra esse jogo, então isso não redireciona tiro
+            -- sozinho: é o modo "mira sem se mexer" pra mirar você mesmo
+            -- em cima da marcação, sem ninguém perceber a câmera travando.
+            if Camera.CameraType ~= Enum.CameraType.Custom then
+                Camera.CameraType = Enum.CameraType.Custom
+            end
+            wasAiming = false
+            Aimbot.IsAiming = true
+
+            if LockMarker then
+                local pos, onScreen = Camera:WorldToViewportPoint(target.Position)
+                LockMarker.Visible = onScreen
+                LockMarker.Position = Vector2.new(pos.X, pos.Y)
+            end
+        elseif target then
+            if LockMarker then LockMarker.Visible = false end
             -- Scriptable enquanto mira, senão a câmera padrão do Roblox
             -- briga com o Lerp e fica tremendo.
             if Camera.CameraType ~= Enum.CameraType.Scriptable then
@@ -112,27 +172,40 @@ Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
                 KeepTouchControlsEnabled() -- sem isso o joystick de andar some no celular
             end
             wasAiming = true
+            Aimbot.IsAiming = true
 
             local targetPos = CFrame.new(Camera.CFrame.Position, target.Position)
             Camera.CFrame = Camera.CFrame:Lerp(targetPos, Aimbot.Settings.Smoothness * (dt * 60))
-        elseif wasAiming then
-            -- Sem alvo: devolve o controle pro jogo em vez de deixar
-            -- Scriptable travado pra sempre.
+        else
+            if LockMarker then LockMarker.Visible = false end
+            if wasAiming then
+                -- Sem alvo: devolve o controle pro jogo em vez de deixar
+                -- Scriptable travado pra sempre.
+                Camera.CameraType = Enum.CameraType.Custom
+                wasAiming = false
+            end
+            Aimbot.IsAiming = false
+        end
+    else
+        if LockMarker then LockMarker.Visible = false end
+        Aimbot.LockedTarget = nil
+        if wasAiming then
             Camera.CameraType = Enum.CameraType.Custom
             wasAiming = false
         end
-    elseif wasAiming then
-        Camera.CameraType = Enum.CameraType.Custom
-        wasAiming = false
+        Aimbot.IsAiming = false
     end
 end)
 
 function Aimbot:Unload()
     self.Settings.Enabled = false
+    self.IsAiming = false
+    self.LockedTarget = nil
     if self._conn then self._conn:Disconnect() self._conn = nil end
     local Camera = Workspace.CurrentCamera
     if Camera then Camera.CameraType = Enum.CameraType.Custom end
     if FOVCircle then FOVCircle:Remove() end
+    if LockMarker then LockMarker:Remove() end
 end
 
 return Aimbot
