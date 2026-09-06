@@ -39,7 +39,11 @@ function InterfaceMain:Load(Hub, Config, State)
     -- customizada + hook em Window.Minimize + simulação de tecla via
     -- VirtualInputManager que a Fluent exigia (~250 linhas) não existe
     -- mais — é só configuração.
-    local Window = WindUI:CreateWindow({
+    --
+    -- Acrylic = true quebrava no seu executor ("attempt to index nil with
+    -- 'AcrylicMain'") — bug interno da WindUI (ainda em Beta) nesse efeito
+    -- de vidro fosco. Tirado por enquanto; o resto da janela funciona igual.
+    local windowConfig = {
         Title = "1NXITER HUB",
         Author = "V3.0 · Modular SRC",
         Icon = customIcon or "house",
@@ -47,7 +51,6 @@ function InterfaceMain:Load(Hub, Config, State)
         Theme = Config.UITheme or "Dark",
         Size = UDim2.fromOffset(580, 460),
         ToggleKey = Enum.KeyCode.LeftControl,
-        Acrylic = true,
 
         OpenButton = {
             Title = "1NX",
@@ -59,7 +62,12 @@ function InterfaceMain:Load(Hub, Config, State)
                 Color3.fromRGB(60, 30, 110)
             ),
         },
-    })
+    }
+
+    local ok, Window = pcall(function() return WindUI:CreateWindow(windowConfig) end)
+    if not ok or not Window then
+        return warn("❌ [1NXITER]: Falha ao criar a janela WindUI -> " .. tostring(Window))
+    end
 
     -- Mesmo problema de sempre: alguma coisa desabilita os controles touch
     -- (joystick de andar) quando a janela abre/fecha. Força de volta pra
