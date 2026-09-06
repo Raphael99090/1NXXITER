@@ -19,6 +19,7 @@ local DefaultConfig = {
     -- Sistema
     AutoRejoin = false,
     UITheme = "Dark",
+    DiscordLink = "https://discord.gg/CGRZRDJqN",
     AutoSave = true
 }
 
