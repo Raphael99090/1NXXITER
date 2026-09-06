@@ -18,7 +18,7 @@ local DefaultConfig = {
     
     -- Sistema
     AutoRejoin = false,
-    UITheme = "Darker",
+    UITheme = "Dark",
     AutoSave = true
 }
 
