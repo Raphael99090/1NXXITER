@@ -1,4 +1,3 @@
-
 # 1NXXITER HUB ⚔️ | v3.0 Modular
 
 ![GitHub License](https://img.shields.io/github/license/Raphael99090/1NXXITER?style=for-the-badge&color=green)
@@ -6,7 +5,7 @@
 ![Version](https://img.shields.io/badge/Version-3.0.0-red?style=for-the-badge)
 ![Architecture](https://img.shields.io/badge/Architecture-Modular_SRC-orange?style=for-the-badge)
 
-O **1NXXITER HUB** v3.0 é um software de automação para Roblox com arquitetura modular de alto nível. Desenvolvido para oferecer máxima performance, estabilidade e uma interface ultra-moderna via **Fluent Library**.
+O **1NXXITER HUB** v3.0 é um software de automação para Roblox com arquitetura modular de alto nível. Desenvolvido para oferecer máxima performance, estabilidade e uma interface ultra-moderna via **WindUI**.
 
 ---
 
@@ -17,6 +16,17 @@ Copie o código abaixo e execute em seu software de preferência (Solara, Wave, 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Raphael99090/1NXXITER/main/src/main.lua"))()
 ```
+
+---
+
+## 🔑 Sistema de Key
+
+O **1NXXITER HUB** utiliza um sistema de **key individual por usuário**.
+
+*   **👤 Key Individual:** Cada usuário possui sua própria key.
+*   **🔗 URL Exclusiva:** Cada usuário recebe uma URL própria para o processo de obtenção da key.
+*   **🛡️ Validação Server-Side:** A key é validada pelo servidor antes do carregamento do Hub.
+*   **♻️ Controle de Acesso:** Keys podem possuir expiração, ativação ou revogação.
 
 ---
 
@@ -52,7 +62,7 @@ Diferente de scripts comuns, a v3.0 utiliza uma estrutura de **Software Modular*
 ## 📂 Estrutura do Repositório
 ```text
 src/
-├── Main.lua            # Loader e Montador do Sistema
+├── main.lua            # Loader e Montador do Sistema
 ├── Core/               # Kernel: State e Utils
 ├── Features/           # Lógica: Aimbot, ESP, PlayerMods...
 └── Interface/          # UI: Janela Principal e Abas (Tabs/)
@@ -62,10 +72,8 @@ src/
 
 ## 👤 Créditos
 *   **Desenvolvedor:** [Raphael99090](https://github.com/Raphael99090)
-*   **UI Library:** [Fluent (Dawid)](https://github.com/dawid-scripts/Fluent)
+*   **UI Library:** [WindUI](https://github.com/Footagesus/WindUI)
 *   **Data de Lançamento:** 21 de Julho de 2026
 
 ---
 > **Aviso:** Este projeto foi criado para fins educacionais e de estudo da linguagem Lua. O uso indevido é de responsabilidade do usuário.
-```
-
