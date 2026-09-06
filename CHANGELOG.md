@@ -4,6 +4,9 @@ Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
 ## [Não lançado]
 
+### Segurança
+- **Keys premium não ficam mais em texto puro no `keys.json`**: como esse arquivo é público (GitHub raw/Pages), guardar a key crua como índice do JSON deixava qualquer um que abrisse a página ler a lista inteira de keys vendidas e usá-las de graça. Agora só o **hash SHA-256** da key fica salvo — implementado um SHA-256 puro em Lua no `main.lua` (sem libs externas, já que o loader roda antes do sistema de módulos existir) e via Web Crypto (`crypto.subtle.digest`) no painel admin, os dois batendo o mesmo hash. Rodei os dois contra vetores de teste oficiais do SHA-256 antes de subir. O painel admin agora deixa claro que a key só aparece na hora da criação — depois só o hash fica recuperável.
+
 ### Alterado
 - **UI trocada de Fluent pra WindUI**: mesma estrutura de abas e funcionalidades, mas o botão flutuante de mobile agora é o `OpenButton` nativo da WindUI (arrastável) — o hack de ~250 linhas que existia em `Interface/Main.lua` pra simular isso em cima da Fluent (bolinha customizada, hook em `Window.Minimize`, `VirtualInputManager` simulando tecla) foi todo removido. Tema agora troca em runtime de verdade via `WindUI:SetTheme` (dropdown nativo na aba Sistema), sem precisar do addon `InterfaceManager` que a Fluent exigia pra isso.
 

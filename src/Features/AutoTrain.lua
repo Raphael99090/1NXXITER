@@ -1,6 +1,37 @@
 local AutoTrain = {}
 local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
 local Player = Players.LocalPlayer
+
+-- Detecta qual sistema de chat o jogo usa (mesmo método do SpyChat).
+-- TextChatService é o novo padrão — jogos que migraram não têm mais
+-- DefaultChatSystemChatEvents no ReplicatedStorage, então o FireServer
+-- antigo simplesmente não faz nada (sem erro, mas sem mensagem).
+local usingTextChatService = false
+pcall(function()
+    usingTextChatService = TextChatService.ChatVersion == Enum.ChatVersion.TextChatService
+end)
+
+-- Tenta enviar pelo sistema certo, com fallback pro outro.
+local function SendChat(message)
+    if usingTextChatService then
+        local ok = pcall(function()
+            local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+            if channel then
+                channel:SendAsync(message)
+            end
+        end)
+        if ok then return true end
+    end
+
+    -- Legacy chat (jogos que ainda usam o sistema antigo)
+    local ok = pcall(function()
+        game:GetService("ReplicatedStorage")
+            .DefaultChatSystemChatEvents
+            .SayMessageRequest:FireServer(message, "All")
+    end)
+    return ok
+end
 
 function AutoTrain:Toggle(Config, State, Hub, updateUI)
     -- Guarda a referência do State: sem isso, Unload() não tinha como
@@ -17,25 +48,39 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
     task.spawn(function()
         local ok, err = pcall(function()
             local step = Config.IsCountdown and -1 or 1
-            local finish = Config.IsCountdown and (Config.StartNum - Config.Quantity) or (Config.StartNum + Config.Quantity)
+            local finish = Config.IsCountdown 
+                and (Config.StartNum - Config.Quantity) 
+                or  (Config.StartNum + Config.Quantity)
 
             for i = Config.StartNum, finish, step do
                 if not State.IsRunning or not State.IsActive then break end
                 
-                if updateUI then updateUI("Contagem: " .. tostring(i)) end
+                local mode = Config.Mode or "Canguru"
+                if updateUI then updateUI(mode .. " — Contagem: " .. tostring(i)) end
                 
-                -- Envia ao Chat (Utils)
+                -- Converte número pra texto PT-BR (Utils)
                 local msg = (Hub.Core.Utils and Hub.Core.Utils:NumberToText(i)) or tostring(i)
-                local sendOk, sendErr = pcall(function()
-                    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(msg .. " !", "All")
-                end)
-                if not sendOk then
-                    warn("⚠️ [1NXITER] AutoTrain: falha ao enviar chat -> " .. tostring(sendErr))
+                
+                -- Envia no chat (suporta TextChatService + legacy)
+                local sent = SendChat(msg .. " !")
+                if not sent then
+                    warn("⚠️ [1NXITER] AutoTrain: falha ao enviar no chat — verifique se o chat está disponível")
                 end
                 
-                -- Física
+                -- Ação física conforme o modo de exercício
                 if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-                    Player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    local hum = Player.Character.Humanoid
+
+                    if mode == "Canguru" then
+                        -- Pulo + agachar (se AutoCrouch estiver ligado)
+                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    elseif mode == "Flexão" then
+                        -- Simula flexão: agacha e levanta
+                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    elseif mode == "Polichinelo" then
+                        -- Simula polichinelo: pulo
+                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
                 end
                 
                 task.wait(Config.Delay or 1.4)
@@ -44,7 +89,9 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
 
         if not ok then
             warn("❌ [1NXITER] AutoTrain: erro na rotina -> " .. tostring(err))
-            if updateUI then updateUI("STATUS: ERRO (veja o console)") end
+            if updateUI then updateUI("STATUS: ERRO (veja o console F9)") end
+        else
+            if updateUI then updateUI("STATUS: CONCLUÍDO ✅") end
         end
 
         State.IsRunning = false

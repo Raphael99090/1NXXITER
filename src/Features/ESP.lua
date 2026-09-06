@@ -140,6 +140,12 @@ end
 function ESP:Toggle(state)
     ESP.Settings.Enabled = state
     if state then
+        -- Guard: desconecta tudo antes de religar (previne duplicatas
+        -- se o toggle for clicado rápido demais sem desligar primeiro)
+        if #ESP._connections > 0 then
+            for _, c in pairs(ESP._connections) do c:Disconnect() end
+            ESP._connections = {}
+        end
         for _, player in pairs(Players:GetPlayers()) do HookPlayer(player) end
         table.insert(ESP._connections, Players.PlayerAdded:Connect(HookPlayer))
         table.insert(ESP._connections, RunService.RenderStepped:Connect(UpdateDrawings))

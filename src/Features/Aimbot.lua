@@ -6,6 +6,11 @@ local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- Guarda o Size original do HumanoidRootPart de cada jogador antes de
+-- expandir — sem isso, desligar o Hitbox Expander não devolvia o tamanho
+-- original e os personagens ficavam com colliders gigantes pra sempre.
+local originalHitboxes = {}
+
 -- Quando a câmera vira Scriptable (usado pra mirar), o script padrão de
 -- controles touch do Roblox se desliga por conta própria — é assim que
 -- o joystick de andar "desaparece" no celular. Forçar Enable() aqui
@@ -125,15 +130,32 @@ Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
         FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     end
 
-    -- Hitbox Expander Logic
+    -- Hitbox Expander Logic (com salvamento/restauração de tamanho original)
     if Aimbot.Settings.HitboxExpander then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                p.Character.HumanoidRootPart.Size = Vector3.new(Aimbot.Settings.HitboxSize, Aimbot.Settings.HitboxSize, Aimbot.Settings.HitboxSize)
-                p.Character.HumanoidRootPart.Transparency = 0.7
-                p.Character.HumanoidRootPart.CanCollide = false
+                local root = p.Character.HumanoidRootPart
+                if not originalHitboxes[p] then
+                    originalHitboxes[p] = root.Size
+                end
+                root.Size = Vector3.new(Aimbot.Settings.HitboxSize, Aimbot.Settings.HitboxSize, Aimbot.Settings.HitboxSize)
+                root.Transparency = 0.7
+                root.CanCollide = false
             end
         end
+    elseif next(originalHitboxes) then
+        -- Restaura hitboxes originais quando desligado
+        for p, origSize in pairs(originalHitboxes) do
+            pcall(function()
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local root = p.Character.HumanoidRootPart
+                    root.Size = origSize
+                    root.Transparency = 0
+                    root.CanCollide = true
+                end
+            end)
+        end
+        originalHitboxes = {}
     end
 
     -- Aimbot Logic
@@ -199,8 +221,23 @@ end)
 
 function Aimbot:Unload()
     self.Settings.Enabled = false
+    self.Settings.HitboxExpander = false
     self.IsAiming = false
     self.LockedTarget = nil
+
+    -- Restaura hitboxes antes de desconectar
+    for p, origSize in pairs(originalHitboxes) do
+        pcall(function()
+            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local root = p.Character.HumanoidRootPart
+                root.Size = origSize
+                root.Transparency = 0
+                root.CanCollide = true
+            end
+        end)
+    end
+    originalHitboxes = {}
+
     if self._conn then self._conn:Disconnect() self._conn = nil end
     local Camera = Workspace.CurrentCamera
     if Camera then Camera.CameraType = Enum.CameraType.Custom end
