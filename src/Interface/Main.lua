@@ -1,164 +1,134 @@
-local Tab = {}
+local InterfaceMain = {}
 
-function Tab:Render(WindowTab, Hub, Config, State)
-    local Aim = Hub.Features.Aimbot
-
-    WindowTab:Section({
-        Title = "Aimbot Master",
-        Icon = "crosshair"
-    })
-
-    local Status = WindowTab:Section({
-        Title = "Status",
-        Desc = "Aimbot desligado"
-    })
-
-    task.spawn(function()
-        while getgenv().InxiterHubLoaded do
-            if not Aim.Settings.Enabled then
-                Status:SetDesc("Aimbot desligado")
-            elseif Aim.Settings.SilentAim and Aim.IsAiming then
-                Status:SetDesc("🔒 Alvo travado (Silent Aim — câmera livre)")
-            elseif Aim.IsAiming then
-                Status:SetDesc("🎯 Mirando em alvo")
-            else
-                Status:SetDesc("👀 Procurando alvo...")
-            end
-
-            task.wait(0.3)
+-- Baixa (ou reaproveita, se já tiver em cache) o ícone customizado do repo
+-- como um asset local, pra usar no topo da janela. Se o executor não
+-- suportar writefile/getcustomasset, cai pro ícone padrão da lib.
+local function GetCustomIconAsset()
+    if not (writefile and getcustomasset and isfile) then return nil end
+    local ICON_URL = "https://raw.githubusercontent.com/Raphael99090/1NXXITER/main/Assets/1784776415112.png"
+    local fileName = "1nxiter_icon.png"
+    local ok, result = pcall(function()
+        if not isfile(fileName) then
+            local data = game:HttpGet(ICON_URL .. "?cache=" .. math.random(1, 999999))
+            writefile(fileName, data)
         end
+        return getcustomasset(fileName)
+    end)
+    return ok and result or nil
+end
+
+function InterfaceMain:Load(Hub, Config, State)
+    -- [1] CARREGAMENTO SEGURO DA WINDUI
+    local success, WindUI = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
     end)
 
-    WindowTab:Toggle({
-        Flag = "AimE",
-        Title = "Ativar Auto-Mira",
-        Icon = "crosshair",
-        Value = false,
-        Callback = function(v)
-            Aim.Settings.Enabled = v
-        end
-    })
+    if not success or not WindUI then
+        return warn("❌ [1NXITER]: Falha ao carregar a biblioteca WindUI.")
+    end
 
-    WindowTab:Toggle({
-        Flag = "AimSilent",
-        Title = "Silent Aim (não gira a câmera)",
-        Icon = "target",
-        Value = false,
-        Callback = function(v)
-            Aim.Settings.SilentAim = v
-        end
-    })
+    -- No mobile o botão de abrir fica embaixo da tela — sem isso as
+    -- notificações ficariam empilhadas por cima dele.
+    pcall(function() WindUI:SetNotificationLower(true) end)
 
-    WindowTab:Toggle({
-        Flag = "AimKeyOnly",
-        Title = "Só mirar segurando E",
-        Icon = "keyboard",
-        Value = false,
-        Callback = function(v)
-            Aim.Settings.AimKeyOnly = v
-        end
-    })
+    local customIcon = GetCustomIconAsset()
 
-    WindowTab:Dropdown({
-        Flag = "AimPriority",
-        Title = "Prioridade de Alvo",
-        Values = {
-            "Mais perto da mira",
-            "Menor vida"
+    -- [2] CRIAÇÃO DA JANELA PRINCIPAL
+    -- A WindUI já resolve minimizar/restaurar em mobile sozinha via
+    -- OpenButton (arrastável, com Draggable=true). O hack de bolinha
+    -- customizada + hook em Window.Minimize + simulação de tecla via
+    -- VirtualInputManager que a Fluent exigia (~250 linhas) não existe
+    -- mais — é só configuração.
+    --
+    -- Acrylic = true quebrava no seu executor ("attempt to index nil with
+    -- 'AcrylicMain'") — bug interno da WindUI (ainda em Beta) nesse efeito
+    -- de vidro fosco. Tirado por enquanto; o resto da janela funciona igual.
+    local windowConfig = {
+        Title = "1NXITER HUB",
+        Author = "V3.0 · Modular SRC",
+        Icon = customIcon or "house",
+        Folder = "InxiterHub",
+        Size = UDim2.fromOffset(580, 460),
+        ToggleKey = Enum.KeyCode.LeftControl,
+
+        OpenButton = {
+            Title = "1NX",
+            Enabled = true,
+            Draggable = true,
+            OnlyMobile = false,
+            Color = ColorSequence.new(
+                Color3.fromRGB(120, 60, 200),
+                Color3.fromRGB(60, 30, 110)
+            ),
         },
-        Value = "Mais perto da mira",
-        Callback = function(v)
-            Aim.Settings.Priority =
-                (v == "Menor vida") and "LowHealth" or "Closest"
-        end
-    })
+    }
 
-    WindowTab:Toggle({
-        Flag = "AimTeam",
-        Title = "Ignorar Time",
-        Icon = "users",
-        Value = false,
-        Callback = function(v)
-            Aim.Settings.TeamCheck = v
-        end
-    })
+    local ok, Window = pcall(function() return WindUI:CreateWindow(windowConfig) end)
+    if not ok or not Window then
+        return warn("❌ [1NXITER]: Falha ao criar a janela WindUI -> " .. tostring(Window))
+    end
 
-    WindowTab:Toggle({
-        Flag = "AimW",
-        Title = "Wall Check",
-        Icon = "scan-eye",
-        Value = true,
-        Callback = function(v)
-            Aim.Settings.WallCheck = v
-        end
-    })
+    -- Mesmo problema de sempre: alguma coisa desabilita os controles touch
+    -- (joystick de andar) quando a janela abre/fecha. Força de volta pra
+    -- garantir que o jogador sempre consegue andar.
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local UserInputService = game:GetService("UserInputService")
+    local function KeepTouchControlsEnabled()
+        pcall(function()
+            local PlayerModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
+            PlayerModule:GetControls():Enable()
+        end)
+        pcall(function() UserInputService.ModalEnabled = false end)
+    end
+    KeepTouchControlsEnabled()
+    Window:OnOpen(KeepTouchControlsEnabled)
+    Window:OnClose(KeepTouchControlsEnabled)
 
-    WindowTab:Toggle({
-        Flag = "AimFOVShow",
-        Title = "Mostrar Círculo do FOV",
-        Icon = "circle-dot",
-        Value = false,
-        Callback = function(v)
-            Aim.Settings.ShowFOV = v
-        end
-    })
+    -- [3] ESTRUTURA DE ABAS
+    local Tabs = {
+        Train = Window:Tab({ Title = "Treino", Icon = "activity" }),
+        Combat = Window:Tab({ Title = "Combate", Icon = "swords" }),
+        ESP = Window:Tab({ Title = "Visual", Icon = "eye" }),
+        Movement = Window:Tab({ Title = "Movimento", Icon = "move" }),
+        Camera = Window:Tab({ Title = "Câmera", Icon = "camera" }),
+        System = Window:Tab({ Title = "Sistema", Icon = "settings" })
+    }
 
-    WindowTab:Slider({
-        Flag = "AimS",
-        Title = "Suavidade",
-        Step = 0.1,
-        Value = {
-            Min = 0.1,
-            Max = 1,
-            Default = 0.5
-        },
-        Callback = function(v)
-            Aim.Settings.Smoothness = v
+    -- [4] INICIALIZAÇÃO DOS MÓDULOS DE ABA
+    local function SafeRender(tabName, tabObject)
+        local tabModule = Hub.UI.Tabs[tabName]
+        if tabModule and tabModule.Render then
+            local ok, err = pcall(function()
+                tabModule:Render(tabObject, Hub, Config, State)
+            end)
+            if not ok then warn("❌ [1NXITER]: Erro ao renderizar aba " .. tabName .. ": " .. tostring(err)) end
+        else
+            warn("⚠️ [1NXITER]: Módulo de aba não encontrado: " .. tabName)
         end
-    })
+    end
 
-    WindowTab:Slider({
-        Flag = "AimF",
-        Title = "Raio do FOV",
-        Step = 1,
-        Value = {
-            Min = 30,
-            Max = 800,
-            Default = 150
-        },
-        Callback = function(v)
-            Aim.Settings.FOVRadius = v
-        end
-    })
+    -- Hub.UI.Library precisa existir ANTES de renderizar as abas — a
+    -- SystemTab usa Hub.UI.Library pro dropdown de tema e pros Notify.
+    Hub.UI.Library = WindUI
+    Hub.UI.Window = Window
 
-    WindowTab:Section({
-        Title = "Hitbox Expander",
-        Icon = "scan"
-    })
+    SafeRender("TrainTab", Tabs.Train)
+    SafeRender("CombatTab", Tabs.Combat)
+    SafeRender("ESPTab", Tabs.ESP)
+    SafeRender("MovementTab", Tabs.Movement)
+    SafeRender("CameraTab", Tabs.Camera)
+    SafeRender("SystemTab", Tabs.System)
 
-    WindowTab:Toggle({
-        Flag = "HitE",
-        Title = "Aumentar Hitbox",
-        Icon = "expand",
-        Value = false,
-        Callback = function(v)
-            Aim.Settings.HitboxExpander = v
-        end
-    })
+    -- [5] FINALIZAÇÃO
+    Tabs.Train:Select()
 
-    WindowTab:Slider({
-        Flag = "HitS",
-        Title = "Tamanho da Hitbox",
-        Step = 1,
-        Value = {
-            Min = 2,
-            Max = 50,
-            Default = 10
-        },
-        Callback = function(v)
-            Aim.Settings.HitboxSize = v
-        end
+    WindUI:Notify({
+        Title = "1NXITER HUB",
+        Content = "Interface carregada com sucesso!",
+        Icon = "solar:bell-bold",
+        Duration = 5
     })
 end
 
-return Tab
+return InterfaceMain
