@@ -1,9 +1,9 @@
-local Tab = {}
+llocal Tab = {}
 
 function Tab:Render(WindowTab, Hub, Config)
     local Aim = Hub.Features.Aimbot
 
-    WindowTab:Section({ Title = "Aimbot Master" })
+    WindowTab:Section({ Title = "Aimbot Master", Icon = "crosshair" })
 
     local Status = WindowTab:Section({ Title = "Status", Desc = "Aimbot desligado" })
 
@@ -26,16 +26,16 @@ function Tab:Render(WindowTab, Hub, Config)
         end
     end)
 
-    WindowTab:Toggle({ Flag = "AimE", Title = "Ativar Auto-Mira", Value = false, Callback = function(v) Aim.Settings.Enabled = v end })
+    WindowTab:Toggle({ Flag = "AimE", Title = "Ativar Auto-Mira", Icon = "crosshair", Value = false, Callback = function(v) Aim.Settings.Enabled = v end })
     WindowTab:Toggle({
         Flag = "AimSilent",
-        Title = "Silent Aim (não gira a câmera)",
+        Title = "Silent Aim (não gira a câmera)", Icon = "target",
         Value = false,
         Callback = function(v) Aim.Settings.SilentAim = v end
     })
     WindowTab:Toggle({
         Flag = "AimKeyOnly",
-        Title = "Só mirar segurando E",
+        Title = "Só mirar segurando E", Icon = "keyboard",
         Value = false,
         Callback = function(v) Aim.Settings.AimKeyOnly = v end
     })
@@ -46,9 +46,9 @@ function Tab:Render(WindowTab, Hub, Config)
         Value = "Mais perto da mira",
         Callback = function(v) Aim.Settings.Priority = (v == "Menor vida") and "LowHealth" or "Closest" end
     })
-    WindowTab:Toggle({ Flag = "AimTeam", Title = "Ignorar Time", Value = false, Callback = function(v) Aim.Settings.TeamCheck = v end })
-    WindowTab:Toggle({ Flag = "AimW", Title = "Wall Check", Value = true, Callback = function(v) Aim.Settings.WallCheck = v end })
-    WindowTab:Toggle({ Flag = "AimFOVShow", Title = "Mostrar Círculo do FOV", Value = false, Callback = function(v) Aim.Settings.ShowFOV = v end })
+    WindowTab:Toggle({ Flag = "AimTeam", Title = "Ignorar Time", Icon = "users", Value = false, Callback = function(v) Aim.Settings.TeamCheck = v end })
+    WindowTab:Toggle({ Flag = "AimW", Title = "Wall Check", Icon = "scan-eye", Value = true, Callback = function(v) Aim.Settings.WallCheck = v end })
+    WindowTab:Toggle({ Flag = "AimFOVShow", Title = "Mostrar Círculo do FOV", Icon = "circle-dot", Value = false, Callback = function(v) Aim.Settings.ShowFOV = v end })
     WindowTab:Slider({
         Flag = "AimS", Title = "Suavidade", Step = 0.1,
         Value = { Min = 0.1, Max = 1, Default = 0.5 },
@@ -60,8 +60,8 @@ function Tab:Render(WindowTab, Hub, Config)
         Callback = function(v) Aim.Settings.FOVRadius = v end
     })
 
-    WindowTab:Section({ Title = "Hitbox Expander" })
-    WindowTab:Toggle({ Flag = "HitE", Title = "Aumentar Hitbox", Value = false, Callback = function(v) Aim.Settings.HitboxExpander = v end })
+    WindowTab:Section({ Title = "Hitbox Expander", Icon = "scan" })
+    WindowTab:Toggle({ Flag = "HitE", Title = "Aumentar Hitbox", Icon = "expand", Value = false, Callback = function(v) Aim.Settings.HitboxExpander = v end })
     WindowTab:Slider({
         Flag = "HitS", Title = "Tamanho da Hitbox", Step = 1,
         Value = { Min = 2, Max = 50, Default = 10 },
