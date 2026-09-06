@@ -3,7 +3,7 @@ local Tab = {}
 function Tab:Render(WindowTab, Hub, Config, State)
     local Mod = Hub.Features.AutoTrain
 
-    WindowTab:Section({ Title = "Controle de Treino" })
+    WindowTab:Section({ Title = "Controle de Treino", Icon = "dumbbell" })
 
     -- Antes era AddParagraph (Fluent) — na WindUI o equivalente com
     -- :SetDesc() pra atualizar o texto depois é Section({Title=, Desc=}).
@@ -11,6 +11,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Button({
         Title = "INICIAR / PARAR TREINO",
+        Icon = "play",
         Callback = function()
             if Mod then
                 Mod:Toggle(Config, State, Hub, function(t) Status:SetDesc(t) end)
@@ -26,7 +27,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
         Callback = function(v) Config.Mode = v end
     })
 
-    WindowTab:Section({ Title = "Configurações da Série" })
+    WindowTab:Section({ Title = "Configurações da Série", Icon = "sliders-horizontal" })
 
     WindowTab:Input({
         Flag = "StartNum",
