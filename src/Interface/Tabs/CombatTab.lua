@@ -1,6 +1,6 @@
 local Tab = {}
 
-function Tab:Render(WindowTab, Hub, Config)
+function Tab:Render(WindowTab, Hub, Config, State)
     local Aim = Hub.Features.Aimbot
 
     WindowTab:Section({
