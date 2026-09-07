@@ -379,7 +379,7 @@ def main():
         else:
             i += 1
 
-    rename = False # O usuário pediu para não renomear as variáveis e usar um ofuscador externo.
+    rename = not no_rename
 
     if do_bundle and os.path.isdir(source):
         result = bundle_directory(source, rename=rename)

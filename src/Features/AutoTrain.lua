@@ -107,12 +107,15 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
                                 local spinSteps = 12
                                 local spinWait = 0.4 / spinSteps
                                 local anglePerStep = totalSpin / spinSteps
+                                local oldAutoRotate = hum.AutoRotate
+                                hum.AutoRotate = false
                                 for j = 1, spinSteps do
                                     if hrp then
                                         hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(anglePerStep), 0)
                                     end
                                     task.wait(spinWait)
                                 end
+                                hum.AutoRotate = oldAutoRotate
                             end)
                         end
                     elseif mode == "Flexão" then

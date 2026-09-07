@@ -1,266 +1,180 @@
 -- [main.lua]
 if getgenv().InxiterHubLoaded and getgenv().InxiterHubInstance then
 warn("♻️ [1NXITER]: Instância anterior detectada — desligando antes de recarregar...")
-local be,ar =pcall(function()
+local ak,ab =pcall(function()
 getgenv().InxiterHubInstance:Unload()
 end)
-if not be then
-warn("⚠️ [1NXITER]: Erro ao desligar instância anterior -> "..tostring(ar))
+if not ak then
+warn("⚠️ [1NXITER]: Erro ao desligar instância anterior -> "..tostring(ab))
 end
 getgenv().InxiterHubLoaded =false
 getgenv().InxiterHubInstance =nil
 end
-local ab ="Raphael99090/1NXXITER"
+local o ="Raphael99090/1NXXITER"
 local b ="main"
-local a ="https://raw.githubusercontent.com/"..ab .."/"..b .."/src/"
-local t ="https://raw.githubusercontent.com/Raphael99090/1NXXITER/main/docs/keys.json"
-local v ="https://linkvertise.com/SEU_ID_AQUI"
-local af =true
-local ag ="TESTE-1NX"
-if af then
-warn("🧪 [1NXITER]: MODO DE TESTE ATIVO — key '"..ag .."' libera sem checar o site. Desliga TESTING_MODE antes de publicar!")
+local a ="https://raw.githubusercontent.com/"..o .."/"..b .."/src/"
+local l ="1nxxiter"
+local k ="https://ads.pandauth.com/getkey/"..l
+local j ="https://api.pandadevelopment.net"
+local s =false
+local t ="TESTE-1NX"
+if s then
+warn("🧪 [1NXITER]: MODO DE TESTE ATIVO — key '"..t .."' libera sem checar o Panda. Desliga TESTING_MODE antes de publicar!")
 end
-local function l()
-local be,az =pcall(function()
+local function e()
+local ak,ah =pcall(function()
 if gethwid then return gethwid()end
 if get_hwid then return get_hwid()end
 if identifyexecutor then
-local bd =identifyexecutor()
-return "id-"..tostring(bd).."-"..tostring(game:GetService("RbxAnalyticsService"):GetClientId())
+local aj =identifyexecutor()
+return "id-"..tostring(aj).."-"..tostring(game:GetService("RbxAnalyticsService"):GetClientId())
 end
 return game:GetService("RbxAnalyticsService"):GetClientId()
 end)
-return be and tostring(az)or "unknown-hwid"
+return ak and tostring(ah)or "unknown-hwid"
 end
-local function k()
-local bi ="1NXITER-DAILY-2026"
-local bl =os.date("!%Y-%m-%d")
-local am =bi ..bl
-local ax =0
-for i =1,#am do
-ax =(ax *31 +string.byte(am,i))%2147483647
-end
-return "1NX-FREE-"..string.format("%08X",ax)
-end
-local function aj(key,ay,callback)
-local be,bf =pcall(function()
-return game:HttpGet(t .."?cache="..math.random(1,999999))
+local m =false
+local n =nil
+task.spawn(function()
+local ak,ai =pcall(function()
+return loadstring(game:HttpGet("https://secure.pandauth.com/pv4/lib"))()
 end)
-if not be or not bf then
-callback(false,"Erro ao conectar ao servidor de keys.")
-return
-end
-local aq,ap =pcall(function()
-return game:GetService("HttpService"):JSONDecode(bf)
-end)
-if not aq or not ap or not ap.keys then
-callback(false,"Erro ao ler dados de keys.")
-return
-end
-local ba =ap.keys[key]
-if not ba then
-callback(false,"Key inválida.")
-return
-end
-if not ba.active then
-callback(false,"Essa key foi revogada.")
-return
-end
-if ba.expires and ba.expires ~=""then
-local bn,bc,ao =ba.expires:match("(%d+)-(%d+)-(%d+)")
-if bn then
-local as =os.time({
-year =tonumber(bn),month =tonumber(bc),day =tonumber(ao),
-hour =23,min =59,sec =59
+if ak and ai and type(ai.configure)=="function"then
+ai.configure({
+serviceId =l,
 })
-if os.time()>as then
-callback(false,"Sua key expirou. Renove no Discord.")
+n =ai
+m =true
+print("✅ [1NXITER]: Biblioteca do Panda Auth (PUSL V4) carregada com sucesso!")
+else
+warn("⚠️ [1NXITER]: Falha ao carregar a biblioteca do Panda Auth.")
+end
+end)
+local function v(key,ag,callback)
+print("🔑 [1NXITER]: Validando key no Panda...")
+if not m or not n then
+callback(false,"A biblioteca do Panda ainda está carregando ou falhou.\nTente novamente em alguns segundos.")
 return
 end
-end
-end
-if ba.ay and ba.ay ~=""and ba.ay ~=ay then
-callback(false,"Key vinculada a outro dispositivo.\nPeça reset de HWID ao admin.")
+local ak,am =pcall(function()
+return n.validate(key)
+end)
+if not ak or type(am)~="table"then
+callback(false,"Erro interno de conexão com o Panda.")
 return
 end
+if am.success then
+print("✅ [1NXITER]: Key validada pelo Panda! Premium: "..tostring(am.isPremium))
 callback(true)
+else
+callback(false,"Key inválida ou recusada pelo servidor.\nPegue uma nova no GetKey.")
+end
 end
 local function c(key,callback)
-if af then
-if key ==ag then
+if s then
+if key ==t then
 callback(true)
 return
 end
 end
-if key ==k()then
-callback(true)
+v(key,e(),callback)
+end
+local function p(onSuccess)
+local ag =e()
+local ao,w =pcall(function()
+return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+if not ao or not w then
+warn("❌ [1NXITER]: Falha ao carregar a biblioteca WindUI para o Key System.")
 return
 end
-aj(key,l(),callback)
+local x =w:CreateWindow({
+Title ="1NXITER HUB",
+Author ="Panda Key System",
+Icon ="key",
+Folder ="InxiterHub",
+Size =UDim2.fromOffset(450,320),
+OpenButton =false,
+Transparent =true,
+Theme ="Dark"
+})
+local u =x:Tab({Title ="Autenticação",Icon ="lock"})
+local h =""
+u:Input({
+Title ="Insira sua Key",
+Desc ="Cole a key gerada pelo Panda Auth abaixo.",
+PlaceholderText ="Cole aqui...",
+Callback =function(text)
+h =text
 end
-local function ac(onSuccess)
-local aa =game:GetService("Players")
-local x =aa.x
-local z =x:WaitForChild("PlayerGui")
-local ay =l()
-local u =Instance.new("ScreenGui")
-u.Name ="InxiterKeyGate"
-u.ResetOnSpawn =false
-u.IgnoreGuiInset =true
-u.Parent =z
-local j =Instance.new("Frame")
-j.Size =UDim2.new(0,320,0,280)
-j.Position =UDim2.new(0.5,-160,0.5,-140)
-j.BackgroundColor3 =Color3.fromRGB(25,15,35)
-j.BorderSizePixel =0
-j.Parent =u
-local h =Instance.new("UICorner")
-h.CornerRadius =UDim.new(0,12)
-h.Parent =j
-local ah =Instance.new("TextLabel")
-ah.Size =UDim2.new(1,0,0,36)
-ah.BackgroundTransparency =1
-ah.Text ="🔑 1NXITER HUB"
-ah.Font =Enum.Font.GothamBold
-ah.TextSize =16
-ah.TextColor3 =Color3.new(1,1,1)
-ah.Parent =j
-local s =Instance.new("TextBox")
-s.Size =UDim2.new(1,-30,0,34)
-s.Position =UDim2.new(0,15,0,42)
-s.BackgroundColor3 =Color3.fromRGB(40,25,55)
-s.TextColor3 =Color3.new(1,1,1)
-s.PlaceholderText ="Cole sua key aqui..."
-s.Text =""
-s.ClearTextOnFocus =false
-s.Font =Enum.Font.Gotham
-s.TextSize =14
-s.Parent =j
-Instance.new("UICorner",s).CornerRadius =UDim.new(0,6)
-local f =Instance.new("TextButton")
-f.Size =UDim2.new(1,-30,0,34)
-f.Position =UDim2.new(0,15,0,84)
-f.BackgroundColor3 =Color3.fromRGB(120,60,200)
-f.Text ="Confirmar"
-f.Font =Enum.Font.GothamBold
-f.TextSize =14
-f.TextColor3 =Color3.new(1,1,1)
-f.Parent =j
-Instance.new("UICorner",f).CornerRadius =UDim.new(0,6)
-local n =Instance.new("TextButton")
-n.Size =UDim2.new(1,-30,0,30)
-n.Position =UDim2.new(0,15,0,124)
-n.BackgroundColor3 =Color3.fromRGB(50,35,70)
-n.Text ="🔗 OBTER KEY GRÁTIS"
-n.Font =Enum.Font.GothamBold
-n.TextSize =12
-n.TextColor3 =Color3.fromRGB(180,140,255)
-n.Parent =j
-Instance.new("UICorner",n).CornerRadius =UDim.new(0,6)
-local p =Instance.new("TextLabel")
-p.Size =UDim2.new(1,-80,0,24)
-p.Position =UDim2.new(0,15,0,164)
-p.BackgroundTransparency =1
-p.Text ="HWID: "..string.sub(ay,1,22)..(string.len(ay)>22 and "..."or "")
-p.Font =Enum.Font.Code
-p.TextSize =10
-p.TextColor3 =Color3.fromRGB(120,120,120)
-p.TextXAlignment =Enum.TextXAlignment.Left
-p.Parent =j
-local g =Instance.new("TextButton")
-g.Size =UDim2.new(0,55,0,20)
-g.Position =UDim2.new(1,-70,0,166)
-g.BackgroundColor3 =Color3.fromRGB(50,35,70)
-g.Text ="Copiar"
-g.Font =Enum.Font.Gotham
-g.TextSize =10
-g.TextColor3 =Color3.fromRGB(180,140,255)
-g.Parent =j
-Instance.new("UICorner",g).CornerRadius =UDim.new(0,4)
-local i =Instance.new("TextLabel")
-i.Size =UDim2.new(1,-30,0,40)
-i.Position =UDim2.new(0,15,0,192)
-i.BackgroundTransparency =1
-i.Text =""
-i.TextColor3 =Color3.fromRGB(255,90,90)
-i.Font =Enum.Font.Gotham
-i.TextSize =11
-i.TextWrapped =true
-i.TextYAlignment =Enum.TextYAlignment.Top
-i.Parent =j
-local r =Instance.new("TextLabel")
-r.Size =UDim2.new(1,-30,0,20)
-r.Position =UDim2.new(0,15,1,-26)
-r.BackgroundTransparency =1
-r.Text ="Key grátis = 24h · Key premium = Discord"
-r.Font =Enum.Font.Gotham
-r.TextSize =10
-r.TextColor3 =Color3.fromRGB(80,80,80)
-r.Parent =j
-local ak =false
-local function ai()
-if ak then return end
-local bb =s.Text
-if bb ==""then
-i.Text ="Cola sua key aí antes de confirmar."
+})
+u:Button({
+Title ="Obter Key (Copiar Link)",
+Desc ="Copia o link para o seu navegador.",
+Icon ="link",
+Callback =function()
+local al =k .."?hwid="..ag
+local aa =setclipboard or toclipboard
+if type(aa)=="function"then
+pcall(aa,al)
+w:Notify({Title ="Key System",Content ="Link copiado para a área de transferência!",Duration =3})
+else
+w:Notify({Title ="Key System",Content ="Abra: "..al,Duration =5})
+end
+end
+})
+u:Button({
+Title ="Copiar HWID",
+Desc =ag,
+Icon ="copy",
+Callback =function()
+local aa =setclipboard or toclipboard
+if type(aa)=="function"then
+pcall(aa,ag)
+w:Notify({Title ="Key System",Content ="HWID copiado!",Duration =3})
+end
+end
+})
+local y =false
+u:Button({
+Title ="Validar e Entrar",
+Icon ="check",
+Callback =function()
+if y then return end
+if h ==""then
+w:Notify({Title ="Aviso",Content ="Insira sua key antes de confirmar.",Duration =3})
 return
 end
-ak =true
-f.Text ="Verificando..."
-i.Text =""
-c(bb,function(valid,errorMsg)
-ak =false
+y =true
+w:Notify({Title ="Key System",Content ="Verificando key...",Duration =2})
+c(h,function(valid,errorMsg)
+y =false
 if valid then
-u:Destroy()
+w:Notify({Title ="Sucesso",Content ="Key validada! Carregando Hub...",Duration =2})
+task.wait(1.5)
+pcall(function()x:Destroy()end)
 onSuccess()
 else
-f.Text ="Confirmar"
-i.Text =errorMsg or "Key inválida. Tenta de novo."
-s.Text =""
+w:Notify({Title ="Erro",Content =errorMsg or "Key inválida. Tente novamente.",Duration =4})
 end
 end)
 end
-f.MouseButton1Click:Connect(ai)
-s.FocusLost:Connect(function(enterPressed)
-if enterPressed then ai()end
-end)
-n.MouseButton1Click:Connect(function()
-local an =setclipboard or toclipboard
-if type(an)=="function"then
-pcall(an,v)
-i.TextColor3 =Color3.fromRGB(100,255,100)
-i.Text ="Link copiado! Cole no navegador."
-else
-i.TextColor3 =Color3.fromRGB(180,140,255)
-i.Text ="Abra: "..v
+})
+u:Select()
 end
-task.delay(4,function()
-i.TextColor3 =Color3.fromRGB(255,90,90)
-i.Text =""
-end)
-end)
-g.MouseButton1Click:Connect(function()
-local an =setclipboard or toclipboard
-if type(an)=="function"then
-pcall(an,ay)
-g.Text ="✅"
-task.delay(2,function()g.Text ="Copiar"end)
-end
-end)
-end
-local o ={
+local f ={
 Core ={},
 Features ={},
 UI ={
 Tabs ={}
 }
 }
-function o:Unload()
-for bd,feature in pairs(self.Features)do
+function f:Unload()
+for aj,feature in pairs(self.Features)do
 if type(feature)=="table"and feature.Unload then
-local be,ar =pcall(function()feature:Unload()end)
-if not be then
-warn("⚠️ [1NXITER]: Erro ao descarregar Features/"..bd .." -> "..tostring(ar))
+local ak,ab =pcall(function()feature:Unload()end)
+if not ak then
+warn("⚠️ [1NXITER]: Erro ao descarregar Features/"..aj .." -> "..tostring(ab))
 end
 end
 end
@@ -271,68 +185,68 @@ if self.UI.Window and self.UI.Window.Destroy then
 pcall(function()self.UI.Window:Destroy()end)
 end
 end
-local function q(path)
-local bm =a ..path ..".lua"
+local function g(path)
+local aq =a ..path ..".lua"
 print("📥 [1NXITER]: Carregando -> "..path)
-local bj,al =pcall(function()
-return game:HttpGet(bm .."?cache="..math.random(1,999999))
+local ao,z =pcall(function()
+return game:HttpGet(aq .."?cache="..math.random(1,999999))
 end)
-if bj and al and not al:match("^404")then
-local aw,ar =loadstring(al)
-if aw then
-local bh,bg =pcall(aw)
-if bh then
-return bg 
+if ao and z and not z:match("^404")then
+local af,ab =loadstring(z)
+if af then
+local an,am =pcall(af)
+if an then
+return am 
 else
-warn("❌ [1NXITER]: Erro ao executar módulo ("..path .."): "..tostring(bg))
+warn("❌ [1NXITER]: Erro ao executar módulo ("..path .."): "..tostring(am))
 end
 else
-warn("❌ [1NXITER]: Erro de sintaxe em ("..path .."): "..tostring(ar))
+warn("❌ [1NXITER]: Erro de sintaxe em ("..path .."): "..tostring(ab))
 end
 else
-warn("❌ [1NXITER]: Arquivo não encontrado ou erro de rede (404) -> "..bm)
+warn("❌ [1NXITER]: Arquivo não encontrado ou erro de rede (404) -> "..aq)
 end
 return nil
 end
-local function w()
-o.Core.Utils =q("Core/Utils")
-o.Core.State =q("Core/State")
-local at ={
+local function i()
+f.Core.Utils =g("Core/Utils")
+f.Core.State =g("Core/State")
+local ac ={
 "AutoTrain","Aimbot","ESP","PlayerMods","FreeCam","SpyChat","Visuals"
 }
-for _,f in pairs(at)do
-o.Features[f]=q("Features/"..f)
+for _,f in pairs(ac)do
+f.Features[f]=g("Features/"..f)
 end
-local bk ={
+local ap ={
 "TrainTab","CombatTab","ESPTab","MovementTab","CameraTab","SystemTab"
 }
-for _,t in pairs(bk)do
-o.UI.Tabs[t]=q("Interface/Tabs/"..t)
+for _,t in pairs(ap)do
+f.UI.Tabs[t]=g("Interface/Tabs/"..t)
 end
-o.UI.Main =q("Interface/Main")
-local function ae()
-if not o.Core.State or not o.UI.Main then
+f.UI.Main =g("Interface/Main")
+local function r()
+if not f.Core.State or not f.UI.Main then
 return warn("❌ [1NXITER]: Falha crítica. Verifique se as pastas e nomes no GitHub estão corretos.")
 end
 print("✅ [1NXITER]: Todos os módulos carregados. Iniciando sistema...")
 getgenv().InxiterHubLoaded =true
-getgenv().InxiterHubInstance =o
-local e =o.Core.State:LoadConfig()
-local ad =o.Core.State:GetRuntimeState()
-o.Core.State:StartAutoSave(e,8)
-if o.Core.Utils then
-o.Core.Utils:AntiAFK(ad)
-o.Core.Utils:AutoRejoin(e)
+getgenv().InxiterHubInstance =f
+local d =f.Core.State:LoadConfig()
+local q =f.Core.State:GetRuntimeState()
+f.Core.State:StartAutoSave(d,8)
+if f.Core.Utils then
+f.Core.Utils:AntiAFK(q)
+f.Core.Utils:AutoRejoin(d)
 end
-o.UI.Main:Load(o,e,ad)
+f.UI.Main:Load(f,d,q)
 end
-local av,au =pcall(ae)
-if not av then
+local ae,ad =pcall(r)
+if not ae then
 getgenv().InxiterHubLoaded =false
-warn("❌ [1NXITER]: Erro fatal durante a inicialização -> "..tostring(au))
+warn("❌ [1NXITER]: Erro fatal durante a inicialização -> "..tostring(ad))
 end
 end
-ac(w)
+p(i)
 -- [Core/State.lua]
 local i ={}
 local g =game:GetService("HttpService")
@@ -508,7 +422,7 @@ local a ="https://games.roblox.com/v1/games/"..game.PlaceId .."/servers/Public?s
 local z,x =pcall(function()
 local v =game:HttpGet(a)
 local q =game:GetService("HttpService"):JSONDecode(v)
-for _,s in pairs(q.q)do
+for _,s in pairs(q.data)do
 if s.playing <s.maxPlayers and s.id ~=game.JobId then
 k:TeleportToPlaceInstance(game.PlaceId,s.id,i)
 return
@@ -542,7 +456,7 @@ local k =game:GetService("Players")
 local l =game:GetService("RunService")
 local m =game:GetService("UserInputService")
 local n =game:GetService("Workspace")
-local h =k.h
+local h =k.LocalPlayer
 local x ={}
 local function g()
 local v =pcall(function()
@@ -731,28 +645,34 @@ return a
 -- [Features/AutoTrain.lua]
 local a ={}
 local c =game:GetService("Players")
-local e =game:GetService("TextChatService")
+local f =game:GetService("TextChatService")
 local b =c.LocalPlayer
-local o =false
+local x =false
 pcall(function()
-o =e.ChatVersion ==Enum.ChatVersion.e
+x =f.ChatVersion ==Enum.ChatVersion.TextChatService
 end)
-local function d(message)
-if o then
-local l =pcall(function()
-local f =e.TextChannels:FindFirstChild("RBXGeneral")
-if f then
-f:SendAsync(message)
+local function e(message)
+if x then
+local q =pcall(function()
+local h =f.TextChannels:FindFirstChild("RBXGeneral")
+if h then
+h:SendAsync(message)
 end
 end)
-if l then return true end
+if q then return true end
 end
-local l =pcall(function()
+local q =pcall(function()
 game:GetService("ReplicatedStorage")
 .DefaultChatSystemChatEvents
 .SayMessageRequest:FireServer(message,"All")
 end)
-return l
+return q
+end
+local y =game:GetService("VirtualInputManager")
+local function d(key,holdTime)
+y:SendKeyEvent(true,key,false,game)
+task.wait(holdTime or 0.05)
+y:SendKeyEvent(false,key,false,game)
 end
 function a:Toggle(Config,State,Hub,updateUI)
 self._state =State
@@ -763,35 +683,61 @@ return
 end
 State.IsRunning =true
 task.spawn(function()
-local l,g =pcall(function()
-local n =Config.IsCountdown and -1 or 1
-local h =Config.IsCountdown 
+local q,j =pcall(function()
+local v =Config.IsCountdown and -1 or 1
+local l =Config.IsCountdown 
 and (Config.StartNum -Config.Quantity)
 or (Config.StartNum +Config.Quantity)
-for i =Config.StartNum,h,n do
+local i =0
+for i =Config.StartNum,l,v do
 if not State.IsRunning or not State.IsActive then break end
-local j =Config.Mode or "Canguru"
-if updateUI then updateUI(j .." — Contagem: "..tostring(i))end
-local k =(Hub.Core.Utils and Hub.Core.Utils:NumberToText(i))or tostring(i)
-local m =d(k .." !")
-if not m then
+local o =Config.Mode or "Canguru"
+if updateUI then updateUI(o .." — Contagem: "..tostring(i))end
+local p =(Hub.Core.Utils and Hub.Core.Utils:NumberToText(i))or tostring(i)
+local s =e(p .." !")
+if not s then
 warn("⚠️ [1NXITER] AutoTrain: falha ao enviar no chat — verifique se o chat está disponível")
 end
 if b.Character and b.Character:FindFirstChild("Humanoid")then
-local i =b.Character.Humanoid
-if j =="Canguru"then
-i:ChangeState(Enum.HumanoidStateType.Jumping)
-elseif j =="Flexão"then
-i:ChangeState(Enum.HumanoidStateType.Jumping)
-elseif j =="Polichinelo"then
-i:ChangeState(Enum.HumanoidStateType.Jumping)
+local n =b.Character.Humanoid
+local m =b.Character:FindFirstChild("HumanoidRootPart")
+if o =="Canguru"then
+if Config.AutoCrouch then
+d(Enum.KeyCode.C)
+task.wait(0.4)
+d(Enum.KeyCode.C)
+task.wait(0.2)
+end
+n:ChangeState(Enum.HumanoidStateType.Jumping)
+if m then
+local k =math.random(2,6)
+if math.random()>0.5 then k =-k end
+local w =360 -i +k
+i =k
+task.spawn(function()
+local t =12
+local u =0.4 /t
+local g =w /t
+local r =n.AutoRotate
+n.AutoRotate =false
+for j =1,t do
+if m then
+m.CFrame =m.CFrame *CFrame.Angles(0,math.rad(g),0)
+end
+task.wait(u)
+end
+n.AutoRotate =r
+end)
+end
+elseif o =="Flexão"then
+elseif o =="Polichinelo"then
 end
 end
 task.wait(Config.Delay or 1.4)
 end
 end)
-if not l then
-warn("❌ [1NXITER] AutoTrain: erro na rotina -> "..tostring(g))
+if not q then
+warn("❌ [1NXITER] AutoTrain: erro na rotina -> "..tostring(j))
 if updateUI then updateUI("STATUS: ERRO (veja o console F9)")end
 else
 if updateUI then updateUI("STATUS: CONCLUÍDO ✅")end
@@ -811,7 +757,7 @@ local b ={}
 local f =game:GetService("Players")
 local g =game:GetService("RunService")
 local k =game:GetService("Workspace")
-local e =f.e
+local e =f.LocalPlayer
 b.Settings ={
 Enabled =false,
 TeamCheck =false,
@@ -957,7 +903,7 @@ local c ={}
 local k =game:GetService("RunService")
 local m =game:GetService("UserInputService")
 local i =game:GetService("Players")
-local e =i.e
+local e =i.LocalPlayer
 c.Settings ={Enabled =false,Speed =1,Sensitivity =0.5 }
 local b =nil
 local f =nil
@@ -1030,7 +976,7 @@ local e ={}
 local i =game:GetService("RunService")
 local j =game:GetService("UserInputService")
 local f =game:GetService("Players")
-local d =f.d
+local d =f.LocalPlayer
 e.Settings ={
 SpeedEnabled =false,SpeedValue =50,
 JumpEnabled =false,JumpValue =100,
@@ -1304,7 +1250,7 @@ w.ScrollBarThickness =2
 w.AutomaticCanvasSize =Enum.AutomaticSize.Y
 local s =Instance.new("UIListLayout",w)
 s.SortOrder =Enum.SortOrder.LayoutOrder;s.Padding =UDim.new(0,5)
-local ac =g.ChatVersion ==Enum.ChatVersion.g
+local ac =g.ChatVersion ==Enum.ChatVersion.TextChatService
 if not ac then
 local function q(p)
 local i =p.Chatted:Connect(function(m)self:LogMessage(p.Name,m)end)
@@ -1413,7 +1359,7 @@ if not q or not l then
 return warn("❌ [1NXITER]: Falha ao criar a janela WindUI -> "..tostring(l))
 end
 local g =game:GetService("Players")
-local e =g.e
+local e =g.LocalPlayer
 local j =game:GetService("UserInputService")
 local function d()
 pcall(function()
@@ -1434,7 +1380,7 @@ Camera =l:Tab({Title ="Câmera",Icon ="camera"}),
 System =l:Tab({Title ="Sistema",Icon ="settings"})
 }
 local function h(tabName,tabObject)
-local t =Hub.UI.i[tabName]
+local t =Hub.UI.Tabs[tabName]
 if t and t.Render then
 local q,o =pcall(function()
 t:Render(tabObject,Hub,Config,State)
@@ -1445,7 +1391,7 @@ warn("⚠️ [1NXITER]: Módulo de aba não encontrado: "..tabName)
 end
 end
 Hub.UI.Library =k
-Hub.UI.l =l
+Hub.UI.Window =l
 h("TrainTab",i.Train)
 h("CombatTab",i.Combat)
 h("ESPTab",i.ESP)
@@ -1737,7 +1683,7 @@ local j =pcall(h,text)
 return j
 end
 function e:Render(WindowTab,Hub,Config,State)
-local f =Hub.Core.f
+local f =Hub.Core.Utils
 local d =Hub.Core.State
 local g =Hub.UI.Library
 WindowTab:Section({
@@ -1846,7 +1792,7 @@ Title ="Copiar link",
 Icon ="copy",
 Variant ="Tertiary",
 Callback =function()
-local b =Config.b
+local b =Config.DiscordLink
 if c(b)then
 g:Notify({
 Title ="Discord",

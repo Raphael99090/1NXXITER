@@ -13,12 +13,13 @@ end
 local REPO ="Raphael99090/1NXXITER"
 local BRANCH ="main"
 local BASE_URL ="https://raw.githubusercontent.com/"..REPO .."/"..BRANCH .."/src/"
-local KEYS_URL ="https://raw.githubusercontent.com/Raphael99090/1NXXITER/main/docs/keys.json"
-local LINKVERTISE_URL ="https://linkvertise.com/SEU_ID_AQUI"
-local TESTING_MODE =true
+local PANDA_SERVICE_ID ="1nxxiter"
+local PANDA_GETKEY_BASE ="https://ads.pandauth.com/getkey/"..PANDA_SERVICE_ID
+local PANDA_API_BASE ="https://api.pandadevelopment.net"
+local TESTING_MODE =false
 local TEST_KEY ="TESTE-1NX"
 if TESTING_MODE then
-warn("🧪 [1NXITER]: MODO DE TESTE ATIVO — key '"..TEST_KEY .."' libera sem checar o site. Desliga TESTING_MODE antes de publicar!")
+warn("🧪 [1NXITER]: MODO DE TESTE ATIVO — key '"..TEST_KEY .."' libera sem checar o Panda. Desliga TESTING_MODE antes de publicar!")
 end
 local function GetHWID()
 local ok,id =pcall(function()
@@ -32,58 +33,42 @@ return game:GetService("RbxAnalyticsService"):GetClientId()
 end)
 return ok and tostring(id)or "unknown-hwid"
 end
-local function GetDailyKey()
-local secret ="1NXITER-DAILY-2026"
-local today =os.date("!%Y-%m-%d")
-local combined =secret ..today
-local hash =0
-for i =1,#combined do
-hash =(hash *31 +string.byte(combined,i))%2147483647
-end
-return "1NX-FREE-"..string.format("%08X",hash)
-end
-local function ValidatePremiumKey(key,hwid,callback)
-local ok,raw =pcall(function()
-return game:HttpGet(KEYS_URL .."?cache="..math.random(1,999999))
+local PUSL_INIT =false
+local PUSL_LIB =nil
+task.spawn(function()
+local ok,lib =pcall(function()
+return loadstring(game:HttpGet("https://secure.pandauth.com/pv4/lib"))()
 end)
-if not ok or not raw then
-callback(false,"Erro ao conectar ao servidor de keys.")
-return
-end
-local decOk,data =pcall(function()
-return game:GetService("HttpService"):JSONDecode(raw)
-end)
-if not decOk or not data or not data.keys then
-callback(false,"Erro ao ler dados de keys.")
-return
-end
-local keyData =data.keys[key]
-if not keyData then
-callback(false,"Key inválida.")
-return
-end
-if not keyData.active then
-callback(false,"Essa key foi revogada.")
-return
-end
-if keyData.expires and keyData.expires ~=""then
-local y,m,d =keyData.expires:match("(%d+)-(%d+)-(%d+)")
-if y then
-local expiryTime =os.time({
-year =tonumber(y),month =tonumber(m),day =tonumber(d),
-hour =23,min =59,sec =59
+if ok and lib and type(lib.configure)=="function"then
+lib.configure({
+serviceId =PANDA_SERVICE_ID,
 })
-if os.time()>expiryTime then
-callback(false,"Sua key expirou. Renove no Discord.")
+PUSL_LIB =lib
+PUSL_INIT =true
+print("✅ [1NXITER]: Biblioteca do Panda Auth (PUSL V4) carregada com sucesso!")
+else
+warn("⚠️ [1NXITER]: Falha ao carregar a biblioteca do Panda Auth.")
+end
+end)
+local function ValidatePandaKey(key,hwid,callback)
+print("🔑 [1NXITER]: Validando key no Panda...")
+if not PUSL_INIT or not PUSL_LIB then
+callback(false,"A biblioteca do Panda ainda está carregando ou falhou.\nTente novamente em alguns segundos.")
 return
 end
-end
-end
-if keyData.hwid and keyData.hwid ~=""and keyData.hwid ~=hwid then
-callback(false,"Key vinculada a outro dispositivo.\nPeça reset de HWID ao admin.")
+local ok,result =pcall(function()
+return PUSL_LIB.validate(key)
+end)
+if not ok or type(result)~="table"then
+callback(false,"Erro interno de conexão com o Panda.")
 return
 end
+if result.success then
+print("✅ [1NXITER]: Key validada pelo Panda! Premium: "..tostring(result.isPremium))
 callback(true)
+else
+callback(false,"Key inválida ou recusada pelo servidor.\nPegue uma nova no GetKey.")
+end
 end
 local function CheckKey(key,callback)
 if TESTING_MODE then
@@ -92,161 +77,90 @@ callback(true)
 return
 end
 end
-if key ==GetDailyKey()then
-callback(true)
-return
-end
-ValidatePremiumKey(key,GetHWID(),callback)
+ValidatePandaKey(key,GetHWID(),callback)
 end
 local function RequestKey(onSuccess)
-local Players =game:GetService("Players")
-local LocalPlayer =Players.LocalPlayer
-local PlayerGui =LocalPlayer:WaitForChild("PlayerGui")
 local hwid =GetHWID()
-local KeyGui =Instance.new("ScreenGui")
-KeyGui.Name ="InxiterKeyGate"
-KeyGui.ResetOnSpawn =false
-KeyGui.IgnoreGuiInset =true
-KeyGui.Parent =PlayerGui
-local Frame =Instance.new("Frame")
-Frame.Size =UDim2.new(0,320,0,280)
-Frame.Position =UDim2.new(0.5,-160,0.5,-140)
-Frame.BackgroundColor3 =Color3.fromRGB(25,15,35)
-Frame.BorderSizePixel =0
-Frame.Parent =KeyGui
-local Corner =Instance.new("UICorner")
-Corner.CornerRadius =UDim.new(0,12)
-Corner.Parent =Frame
-local Title =Instance.new("TextLabel")
-Title.Size =UDim2.new(1,0,0,36)
-Title.BackgroundTransparency =1
-Title.Text ="🔑 1NXITER HUB"
-Title.Font =Enum.Font.GothamBold
-Title.TextSize =16
-Title.TextColor3 =Color3.new(1,1,1)
-Title.Parent =Frame
-local Input =Instance.new("TextBox")
-Input.Size =UDim2.new(1,-30,0,34)
-Input.Position =UDim2.new(0,15,0,42)
-Input.BackgroundColor3 =Color3.fromRGB(40,25,55)
-Input.TextColor3 =Color3.new(1,1,1)
-Input.PlaceholderText ="Cole sua key aqui..."
-Input.Text =""
-Input.ClearTextOnFocus =false
-Input.Font =Enum.Font.Gotham
-Input.TextSize =14
-Input.Parent =Frame
-Instance.new("UICorner",Input).CornerRadius =UDim.new(0,6)
-local Confirm =Instance.new("TextButton")
-Confirm.Size =UDim2.new(1,-30,0,34)
-Confirm.Position =UDim2.new(0,15,0,84)
-Confirm.BackgroundColor3 =Color3.fromRGB(120,60,200)
-Confirm.Text ="Confirmar"
-Confirm.Font =Enum.Font.GothamBold
-Confirm.TextSize =14
-Confirm.TextColor3 =Color3.new(1,1,1)
-Confirm.Parent =Frame
-Instance.new("UICorner",Confirm).CornerRadius =UDim.new(0,6)
-local GetKeyBtn =Instance.new("TextButton")
-GetKeyBtn.Size =UDim2.new(1,-30,0,30)
-GetKeyBtn.Position =UDim2.new(0,15,0,124)
-GetKeyBtn.BackgroundColor3 =Color3.fromRGB(50,35,70)
-GetKeyBtn.Text ="🔗 OBTER KEY GRÁTIS"
-GetKeyBtn.Font =Enum.Font.GothamBold
-GetKeyBtn.TextSize =12
-GetKeyBtn.TextColor3 =Color3.fromRGB(180,140,255)
-GetKeyBtn.Parent =Frame
-Instance.new("UICorner",GetKeyBtn).CornerRadius =UDim.new(0,6)
-local HwidLabel =Instance.new("TextLabel")
-HwidLabel.Size =UDim2.new(1,-80,0,24)
-HwidLabel.Position =UDim2.new(0,15,0,164)
-HwidLabel.BackgroundTransparency =1
-HwidLabel.Text ="HWID: "..string.sub(hwid,1,22)..(string.len(hwid)>22 and "..."or "")
-HwidLabel.Font =Enum.Font.Code
-HwidLabel.TextSize =10
-HwidLabel.TextColor3 =Color3.fromRGB(120,120,120)
-HwidLabel.TextXAlignment =Enum.TextXAlignment.Left
-HwidLabel.Parent =Frame
-local CopyHwid =Instance.new("TextButton")
-CopyHwid.Size =UDim2.new(0,55,0,20)
-CopyHwid.Position =UDim2.new(1,-70,0,166)
-CopyHwid.BackgroundColor3 =Color3.fromRGB(50,35,70)
-CopyHwid.Text ="Copiar"
-CopyHwid.Font =Enum.Font.Gotham
-CopyHwid.TextSize =10
-CopyHwid.TextColor3 =Color3.fromRGB(180,140,255)
-CopyHwid.Parent =Frame
-Instance.new("UICorner",CopyHwid).CornerRadius =UDim.new(0,4)
-local ErrorLabel =Instance.new("TextLabel")
-ErrorLabel.Size =UDim2.new(1,-30,0,40)
-ErrorLabel.Position =UDim2.new(0,15,0,192)
-ErrorLabel.BackgroundTransparency =1
-ErrorLabel.Text =""
-ErrorLabel.TextColor3 =Color3.fromRGB(255,90,90)
-ErrorLabel.Font =Enum.Font.Gotham
-ErrorLabel.TextSize =11
-ErrorLabel.TextWrapped =true
-ErrorLabel.TextYAlignment =Enum.TextYAlignment.Top
-ErrorLabel.Parent =Frame
-local InfoLabel =Instance.new("TextLabel")
-InfoLabel.Size =UDim2.new(1,-30,0,20)
-InfoLabel.Position =UDim2.new(0,15,1,-26)
-InfoLabel.BackgroundTransparency =1
-InfoLabel.Text ="Key grátis = 24h · Key premium = Discord"
-InfoLabel.Font =Enum.Font.Gotham
-InfoLabel.TextSize =10
-InfoLabel.TextColor3 =Color3.fromRGB(80,80,80)
-InfoLabel.Parent =Frame
-local checking =false
-local function TryKey()
-if checking then return end
-local keyText =Input.Text
-if keyText ==""then
-ErrorLabel.Text ="Cola sua key aí antes de confirmar."
+local success,WindUI =pcall(function()
+return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+if not success or not WindUI then
+warn("❌ [1NXITER]: Falha ao carregar a biblioteca WindUI para o Key System.")
 return
 end
-checking =true
-Confirm.Text ="Verificando..."
-ErrorLabel.Text =""
-CheckKey(keyText,function(valid,errorMsg)
-checking =false
-if valid then
-KeyGui:Destroy()
-onSuccess()
-else
-Confirm.Text ="Confirmar"
-ErrorLabel.Text =errorMsg or "Key inválida. Tenta de novo."
-Input.Text =""
+local Window =WindUI:CreateWindow({
+Title ="1NXITER HUB",
+Author ="Panda Key System",
+Icon ="key",
+Folder ="InxiterHub",
+Size =UDim2.fromOffset(450,320),
+OpenButton =false,
+Transparent =true,
+Theme ="Dark"
+})
+local Tab =Window:Tab({Title ="Autenticação",Icon ="lock"})
+local KeyInput =""
+Tab:Input({
+Title ="Insira sua Key",
+Desc ="Cole a key gerada pelo Panda Auth abaixo.",
+PlaceholderText ="Cole aqui...",
+Callback =function(text)
+KeyInput =text
 end
-end)
-end
-Confirm.MouseButton1Click:Connect(TryKey)
-Input.FocusLost:Connect(function(enterPressed)
-if enterPressed then TryKey()end
-end)
-GetKeyBtn.MouseButton1Click:Connect(function()
+})
+Tab:Button({
+Title ="Obter Key (Copiar Link)",
+Desc ="Copia o link para o seu navegador.",
+Icon ="link",
+Callback =function()
+local pandaUrl =PANDA_GETKEY_BASE .."?hwid="..hwid
 local copier =setclipboard or toclipboard
 if type(copier)=="function"then
-pcall(copier,LINKVERTISE_URL)
-ErrorLabel.TextColor3 =Color3.fromRGB(100,255,100)
-ErrorLabel.Text ="Link copiado! Cole no navegador."
+pcall(copier,pandaUrl)
+WindUI:Notify({Title ="Key System",Content ="Link copiado para a área de transferência!",Duration =3})
 else
-ErrorLabel.TextColor3 =Color3.fromRGB(180,140,255)
-ErrorLabel.Text ="Abra: "..LINKVERTISE_URL
+WindUI:Notify({Title ="Key System",Content ="Abra: "..pandaUrl,Duration =5})
 end
-task.delay(4,function()
-ErrorLabel.TextColor3 =Color3.fromRGB(255,90,90)
-ErrorLabel.Text =""
-end)
-end)
-CopyHwid.MouseButton1Click:Connect(function()
+end
+})
+Tab:Button({
+Title ="Copiar HWID",
+Desc =hwid,
+Icon ="copy",
+Callback =function()
 local copier =setclipboard or toclipboard
 if type(copier)=="function"then
 pcall(copier,hwid)
-CopyHwid.Text ="✅"
-task.delay(2,function()CopyHwid.Text ="Copiar"end)
+WindUI:Notify({Title ="Key System",Content ="HWID copiado!",Duration =3})
+end
+end
+})
+local checking =false
+Tab:Button({
+Title ="Validar e Entrar",
+Icon ="check",
+Callback =function()
+if checking then return end
+if KeyInput ==""then
+WindUI:Notify({Title ="Aviso",Content ="Insira sua key antes de confirmar.",Duration =3})
+return
+end
+checking =true
+WindUI:Notify({Title ="Key System",Content ="Verificando key...",Duration =2})
+CheckKey(KeyInput,function(valid,errorMsg)
+checking =false
+if valid then
+WindUI:Notify({Title ="Sucesso",Content ="Key validada! Carregando Hub...",Duration =2})
+task.wait(1.5)
+pcall(function()Window:Destroy()end)
+onSuccess()
+else
+WindUI:Notify({Title ="Erro",Content =errorMsg or "Key inválida. Tente novamente.",Duration =4})
 end
 end)
+end
+})
+Tab:Select()
 end
 local Hub ={
 Core ={},
@@ -754,6 +668,12 @@ game:GetService("ReplicatedStorage")
 end)
 return ok
 end
+local vim =game:GetService("VirtualInputManager")
+local function PressKey(key,holdTime)
+vim:SendKeyEvent(true,key,false,game)
+task.wait(holdTime or 0.05)
+vim:SendKeyEvent(false,key,false,game)
+end
 function AutoTrain:Toggle(Config,State,Hub,updateUI)
 self._state =State
 if State.IsRunning then 
@@ -768,6 +688,7 @@ local step =Config.IsCountdown and -1 or 1
 local finish =Config.IsCountdown 
 and (Config.StartNum -Config.Quantity)
 or (Config.StartNum +Config.Quantity)
+local currentError =0
 for i =Config.StartNum,finish,step do
 if not State.IsRunning or not State.IsActive then break end
 local mode =Config.Mode or "Canguru"
@@ -779,12 +700,37 @@ warn("⚠️ [1NXITER] AutoTrain: falha ao enviar no chat — verifique se o cha
 end
 if Player.Character and Player.Character:FindFirstChild("Humanoid")then
 local hum =Player.Character.Humanoid
+local hrp =Player.Character:FindFirstChild("HumanoidRootPart")
 if mode =="Canguru"then
+if Config.AutoCrouch then
+PressKey(Enum.KeyCode.C)
+task.wait(0.4)
+PressKey(Enum.KeyCode.C)
+task.wait(0.2)
+end
 hum:ChangeState(Enum.HumanoidStateType.Jumping)
+if hrp then
+local errorAngle =math.random(2,6)
+if math.random()>0.5 then errorAngle =-errorAngle end
+local totalSpin =360 -currentError +errorAngle
+currentError =errorAngle
+task.spawn(function()
+local spinSteps =12
+local spinWait =0.4 /spinSteps
+local anglePerStep =totalSpin /spinSteps
+local oldAutoRotate =hum.AutoRotate
+hum.AutoRotate =false
+for j =1,spinSteps do
+if hrp then
+hrp.CFrame =hrp.CFrame *CFrame.Angles(0,math.rad(anglePerStep),0)
+end
+task.wait(spinWait)
+end
+hum.AutoRotate =oldAutoRotate
+end)
+end
 elseif mode =="Flexão"then
-hum:ChangeState(Enum.HumanoidStateType.Jumping)
 elseif mode =="Polichinelo"then
-hum:ChangeState(Enum.HumanoidStateType.Jumping)
 end
 end
 task.wait(Config.Delay or 1.4)
