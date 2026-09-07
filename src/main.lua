@@ -87,71 +87,51 @@ local function GetHWID()
 end
 
 -- ======================================================
--- VALIDAÇÃO VIA PANDA API (PUSL-V4 HTTP)
+-- VALIDAÇÃO VIA PANDA API (NOVA PUSL-V4 HTTP)
 -- ======================================================
--- Chama a API do Panda pra validar a key server-side.
--- O Panda checa: key existe? está ativa? HWID bate?
--- Tudo feito no servidor deles — nada de JSON público.
+local PUSL_INIT = false
+local PUSL_LIB = nil
+
+task.spawn(function()
+    local ok, lib = pcall(function()
+        return loadstring(game:HttpGet("https://secure.pandauth.com/pv4/lib"))()
+    end)
+    if ok and lib and type(lib.configure) == "function" then
+        lib.configure({
+            serviceId = PANDA_SERVICE_ID,
+        })
+        PUSL_LIB = lib
+        PUSL_INIT = true
+        print("✅ [1NXITER]: Biblioteca do Panda Auth (PUSL V4) carregada com sucesso!")
+    else
+        warn("⚠️ [1NXITER]: Falha ao carregar a biblioteca do Panda Auth.")
+    end
+end)
+
 local function ValidatePandaKey(key, hwid, callback)
-    local HttpService = game:GetService("HttpService")
-
-    -- Monta a URL de validação (PUSL-V4)
-    -- Endpoint: GET /validate?identifier=<id>&key=<key>&hwid=<hwid>
-    local validateUrl = PANDA_API_BASE .. "/validate"
-        .. "?identifier=" .. HttpService:UrlEncode(PANDA_SERVICE_ID)
-        .. "&key=" .. HttpService:UrlEncode(key)
-        .. "&hwid=" .. HttpService:UrlEncode(hwid)
-
     print("🔑 [1NXITER]: Validando key no Panda...")
 
-    local ok, response = pcall(function()
-        return game:HttpGet(validateUrl)
-    end)
-
-    if not ok or not response then
-        callback(false, "Erro de conexão com o Panda.\nVerifique sua internet.")
+    if not PUSL_INIT or not PUSL_LIB then
+        callback(false, "A biblioteca do Panda ainda está carregando ou falhou.\nTente novamente em alguns segundos.")
         return
     end
 
-    -- Tenta decodificar a resposta JSON do Panda
-    local decOk, data = pcall(function()
-        return HttpService:JSONDecode(response)
+    local ok, result = pcall(function()
+        return PUSL_LIB.validate(key)
     end)
 
-    if not decOk or not data then
-        -- Algumas respostas do Panda podem vir como texto puro
-        if response:lower():find("valid") then
-            callback(true)
-        else
-            callback(false, "Resposta inesperada do servidor.\nTente novamente.")
-        end
+    if not ok or type(result) ~= "table" then
+        callback(false, "Erro interno de conexão com o Panda.")
         return
     end
 
-    -- Checa o status retornado pela API do Panda
-    -- Respostas possíveis:
-    --   { "status": "Valid" }           → Key válida
-    --   { "status": "Invalid" }         → Key não existe
-    --   { "status": "Expired" }         → Key expirada
-    --   { "status": "HWID_Mismatch" }   → Key vinculada a outro dispositivo
-    --   { "status": "Revoked" }         → Key revogada pelo admin
-    local status = data.status or data.Status or ""
-
-    if status:lower() == "valid" or status:lower() == "validated" then
-        print("✅ [1NXITER]: Key validada pelo Panda!")
+    if result.success then
+        print("✅ [1NXITER]: Key validada pelo Panda! Premium: " .. tostring(result.isPremium))
         callback(true)
-    elseif status:lower() == "invalid" then
-        callback(false, "Key inválida. Pegue uma nova no GetKey.")
-    elseif status:lower() == "expired" then
-        callback(false, "Sua key expirou.\nPegue uma nova no GetKey.")
-    elseif status:lower() == "hwid_mismatch" or status:lower() == "hwid mismatch" then
-        callback(false, "Key vinculada a outro dispositivo.\nPeça reset de HWID ao admin.")
-    elseif status:lower() == "revoked" then
-        callback(false, "Essa key foi revogada pelo admin.")
     else
-        -- Erro genérico ou mensagem personalizada do Panda
-        local msg = data.message or data.error or data.msg or "Key recusada pelo servidor."
-        callback(false, tostring(msg))
+        -- O result do novo Panda Auth não costuma especificar se foi HWID, Expired, etc. de forma fácil
+        -- Então retornamos uma mensagem padrão informando que a key falhou.
+        callback(false, "Key inválida ou recusada pelo servidor.\nPegue uma nova no GetKey.")
     end
 end
 
