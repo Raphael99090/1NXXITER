@@ -19,14 +19,15 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/Raphael99090/1NXXITER
 
 ---
 
-## 🔑 Sistema de Key
+## 🔑 Sistema de Key (Panda Key System)
 
-O **1NXXITER HUB** utiliza um sistema de **key individual por usuário**.
+O **1NXXITER HUB** utiliza o **Panda Key System** (pandadevelopment.net) para validação server-side.
 
-*   **👤 Key Individual:** Cada usuário possui sua própria key.
-*   **🔗 URL Exclusiva:** Cada usuário recebe uma URL própria para o processo de obtenção da key.
-*   **🛡️ Validação Server-Side:** A key é validada pelo servidor antes do carregamento do Hub.
-*   **♻️ Controle de Acesso:** Keys podem possuir expiração, ativação ou revogação.
+*   **🔐 Validação Server-Side:** Keys são validadas nos servidores do Panda antes do Hub carregar.
+*   **🔗 GetKey Page:** Usuários obtêm keys através da página GetKey do Panda.
+*   **🛡️ HWID Lock:** Cada key é travada ao dispositivo do usuário automaticamente.
+*   **📊 Analytics:** Acompanhe execuções e uso no dashboard do Panda.
+*   **💰 Monetização:** Suporte integrado a Linkvertise, LootLabs, AdMaven e outros.
 
 ---
 
