@@ -37,8 +37,22 @@ function FreeCam:Toggle(state)
         if TouchEndConn then TouchEndConn:Disconnect() TouchEndConn = nil end
 
         Camera.CameraType = Enum.CameraType.Scriptable
-        KeepTouchControlsEnabled() -- sem isso o joystick de andar some no celular
-        Rot = Vector2.new(0, 0)
+        
+        local Controls = nil
+        pcall(function()
+            local pm = LocalPlayer.PlayerScripts:WaitForChild("PlayerModule", 1)
+            if pm then
+                local PlayerModule = require(pm)
+                Controls = PlayerModule:GetControls()
+                Controls:Enable()
+            end
+        end)
+        
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.Anchored = true
+        end
+
+        Rot = Vector2.new(Camera.CFrame:ToEulerAnglesYXZ()) -- Inicia olhando pra onde já estava
         touchDelta = Vector2.new(0, 0)
         lastTouchPos = nil
 
@@ -56,13 +70,13 @@ function FreeCam:Toggle(state)
         end)
 
         Conn = RunService.RenderStepped:Connect(function(dt)
-            local cam = workspace.CurrentCamera -- busca de novo, nunca cacheado
+            local cam = workspace.CurrentCamera
             if not cam then return end
 
             local delta = UserInputService:GetMouseDelta()
             if delta.Magnitude == 0 then
                 delta = touchDelta
-                touchDelta = Vector2.new(0, 0) -- consome o delta do touch pra não repetir
+                touchDelta = Vector2.new(0, 0)
             end
 
             Rot = Rot + (delta * -0.005 * self.Settings.Sensitivity)
@@ -70,14 +84,25 @@ function FreeCam:Toggle(state)
             cam.CFrame = CFrame.new(cam.CFrame.Position) * CFrame.Angles(0, Rot.X, 0) * CFrame.Angles(Rot.Y, 0, 0)
 
             local move = Vector3.new()
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0,0,-1) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0,0,1) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1,0,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1,0,0) end
+            
+            if Controls then
+                local joystickMove = Controls:GetMoveVector()
+                move = Vector3.new(joystickMove.X, 0, joystickMove.Z)
+            else
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0,0,-1) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0,0,1) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1,0,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1,0,0) end
+            end
+            
+            if UserInputService:IsKeyDown(Enum.KeyCode.E) then move = move + Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Q) then move = move + Vector3.new(0,-1,0) end
             
             local mult = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and 4 or 1
             if move.Magnitude > 0 then
-                cam.CFrame = cam.CFrame + cam.CFrame:VectorToWorldSpace(move.Unit * self.Settings.Speed * mult)
+                -- Normalize se for maior que 1 (evita andar muito rápido na diagonal no PC)
+                if move.Magnitude > 1 then move = move.Unit end
+                cam.CFrame = cam.CFrame + cam.CFrame:VectorToWorldSpace(move * self.Settings.Speed * mult)
             end
         end)
     else
@@ -85,6 +110,10 @@ function FreeCam:Toggle(state)
         if LookConn then LookConn:Disconnect() LookConn = nil end
         if TouchEndConn then TouchEndConn:Disconnect() TouchEndConn = nil end
         Camera.CameraType = Enum.CameraType.Custom
+        
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.Anchored = false
+        end
     end
 end
 

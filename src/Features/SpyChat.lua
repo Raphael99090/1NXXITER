@@ -87,82 +87,107 @@ end
 function SpyChat:Toggle(state)
     self.Enabled = state
     if state then
-        -- [ CRIAÇÃO DA UI ESTILO HD ADMIN ]
+        -- [ CRIAÇÃO DA UI ESTILO MODERNO ]
         local sg = Instance.new("ScreenGui", CoreGui); sg.Name = "InxiterSpyHUD"
         self.Gui = sg
 
         local main = Instance.new("Frame", sg)
         main.Name = "Main"
-        main.Size = UDim2.new(0, 400, 0, 250)
-        main.Position = UDim2.new(0.5, -200, 0.5, -125)
-        main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-        main.BackgroundTransparency = 0.1
+        main.Size = UDim2.new(0, 420, 0, 280)
+        main.Position = UDim2.new(0.5, -210, 0.5, -140)
+        main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        main.BackgroundTransparency = 0.15
         main.BorderSizePixel = 0
+        main.ClipsDescendants = true
+        
+        local mainCorner = Instance.new("UICorner", main)
+        mainCorner.CornerRadius = UDim.new(0, 8)
+        
+        local mainStroke = Instance.new("UIStroke", main)
+        mainStroke.Color = Color3.fromRGB(60, 60, 60)
+        mainStroke.Thickness = 1
 
         local top = Instance.new("Frame", main)
         top.Name = "Top"
-        top.Size = UDim2.new(1, 0, 0, 30)
-        top.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+        top.Size = UDim2.new(1, 0, 0, 35)
+        top.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
         top.BorderSizePixel = 0
         for _, c in pairs(MakeDraggable(main, top)) do
             if c then table.insert(self.Connections, c) end
         end
+        
+        local topSeparator = Instance.new("Frame", top)
+        topSeparator.Size = UDim2.new(1, 0, 0, 1)
+        topSeparator.Position = UDim2.new(0, 0, 1, 0)
+        topSeparator.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        topSeparator.BorderSizePixel = 0
 
         local title = Instance.new("TextLabel", top)
-        title.Text = "  CHAT LOGS (HD ADMIN STYLE)"
-        title.Size = UDim2.new(1, -80, 1, 0)
+        title.Text = "  SPY CHAT LOGS"
+        title.Size = UDim2.new(1, -50, 1, 0)
         title.BackgroundTransparency = 1
-        title.TextColor3 = Color3.new(1,1,1)
+        title.TextColor3 = Color3.fromRGB(220, 220, 220)
         title.Font = Enum.Font.GothamBold
-        title.TextSize = 12
+        title.TextSize = 13
         title.TextXAlignment = Enum.TextXAlignment.Left
 
-        -- Botões Fechar/Minimizar
-        local close = Instance.new("TextButton", top)
-        close.Text = "X"; close.Size = UDim2.new(0, 30, 1, 0); close.Position = UDim2.new(1, -30, 0, 0)
-        close.BackgroundColor3 = Color3.fromRGB(150, 0, 0); close.TextColor3 = Color3.new(1,1,1)
-        close.MouseButton1Click:Connect(function() self:Toggle(false) end)
-
+        -- Apenas Botão Minimizar (Para fechar de verdade, use o Toggle no Hub para não dessincronizar)
         local mini = Instance.new("TextButton", top)
-        mini.Text = "-"; mini.Size = UDim2.new(0, 30, 1, 0); mini.Position = UDim2.new(1, -60, 0, 0)
-        mini.BackgroundColor3 = Color3.fromRGB(40, 40, 40); mini.TextColor3 = Color3.new(1,1,1)
+        mini.Text = "-"
+        mini.Size = UDim2.new(0, 30, 0, 30)
+        mini.Position = UDim2.new(1, -35, 0.5, -15)
+        mini.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        mini.TextColor3 = Color3.new(1,1,1)
+        mini.Font = Enum.Font.GothamBold
+        mini.TextSize = 14
+        
+        local miniCorner = Instance.new("UICorner", mini)
+        miniCorner.CornerRadius = UDim.new(0, 6)
+        
         mini.MouseButton1Click:Connect(function()
             self.Minimized = not self.Minimized
             main.Content.Visible = not self.Minimized
-            main.Size = self.Minimized and UDim2.new(0, 400, 0, 30) or UDim2.new(0, 400, 0, 250)
+            main.Size = self.Minimized and UDim2.new(0, 420, 0, 35) or UDim2.new(0, 420, 0, 280)
         end)
 
         local content = Instance.new("Frame", main)
         content.Name = "Content"
-        content.Size = UDim2.new(1, 0, 1, -30)
-        content.Position = UDim2.new(0, 0, 0, 30)
+        content.Size = UDim2.new(1, 0, 1, -35)
+        content.Position = UDim2.new(0, 0, 0, 35)
         content.BackgroundTransparency = 1
 
         local search = Instance.new("TextBox", content)
         search.PlaceholderText = "Pesquisar usuário..."
-        search.Size = UDim2.new(1, -20, 0, 25)
-        search.Position = UDim2.new(0, 10, 0, 5)
-        search.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-        search.TextColor3 = Color3.new(1,1,1)
+        search.Size = UDim2.new(1, -20, 0, 30)
+        search.Position = UDim2.new(0, 10, 0, 10)
+        search.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        search.TextColor3 = Color3.fromRGB(220, 220, 220)
+        search.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+        search.Font = Enum.Font.Gotham
+        search.TextSize = 13
         search.BorderSizePixel = 0
         search:GetPropertyChangedSignal("Text"):Connect(function() self:Filter(search.Text) end)
+        
+        local searchCorner = Instance.new("UICorner", search)
+        searchCorner.CornerRadius = UDim.new(0, 6)
+        
+        local searchPadding = Instance.new("UIPadding", search)
+        searchPadding.PaddingLeft = UDim.new(0, 10)
 
         local scroll = Instance.new("ScrollingFrame", content)
         scroll.Name = "Scroll"
-        scroll.Size = UDim2.new(1, -20, 1, -45)
-        scroll.Position = UDim2.new(0, 10, 0, 35)
+        scroll.Size = UDim2.new(1, -20, 1, -60)
+        scroll.Position = UDim2.new(0, 10, 0, 50)
         scroll.BackgroundTransparency = 1
         scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-        scroll.ScrollBarThickness = 2
+        scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+        scroll.ScrollBarThickness = 4
         scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
         
         local layout = Instance.new("UIListLayout", scroll)
         layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 5)
 
         -- [ CAPTURA DE CHAT ]
-        -- Em jogos que já usam TextChatService, Player.Chatted normalmente
-        -- ainda dispara por compatibilidade — hookar os dois duplicava
-        -- cada mensagem no log. Agora é um ou outro, nunca os dois.
         local usingTextChatService = TextChatService.ChatVersion == Enum.ChatVersion.TextChatService
 
         if not usingTextChatService then
@@ -174,7 +199,11 @@ function SpyChat:Toggle(state)
             table.insert(self.Connections, Players.PlayerAdded:Connect(hook))
         else
             local c = TextChatService.MessageReceived:Connect(function(res)
-                if res.TextSource then self:LogMessage(res.TextSource.DisplayName, res.Text) end
+                if res.TextSource then 
+                    local sender = Players:GetPlayerByUserId(res.TextSource.UserId)
+                    local pName = sender and sender.Name or "Desconhecido"
+                    self:LogMessage(pName, res.Text) 
+                end
             end)
             table.insert(self.Connections, c)
         end

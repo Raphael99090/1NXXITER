@@ -102,15 +102,35 @@ function Utils:ServerHop()
 end
 
 function Utils:AntiLag()
-    settings().Rendering.QualityLevel = 1
+    local Terrain = workspace:FindFirstChildOfClass("Terrain")
+    if Terrain then
+        Terrain.WaterWaveSize = 0
+        Terrain.WaterWaveSpeed = 0
+        Terrain.WaterReflectance = 0
+        Terrain.WaterTransparency = 0
+        pcall(function() sethiddenproperty(Terrain, "Decoration", false) end)
+    end
+    
     Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    Lighting.Brightness = 2
+    
+    for _, v in pairs(Lighting:GetDescendants()) do
+        if v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("Atmosphere") then
+            v.Enabled = false
+        end
+    end
+    
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             v.Material = Enum.Material.SmoothPlastic
             v.Reflectance = 0
+            v.CastShadow = false
         elseif v:IsA("Decal") or v:IsA("Texture") then
             v.Transparency = 1
-        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
             v.Enabled = false
         end
     end

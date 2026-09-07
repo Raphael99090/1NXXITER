@@ -89,6 +89,54 @@ function Tab:Render(WindowTab, Hub, Config, State)
         end
     })
 
+    local TeamsList = {}
+    pcall(function()
+        for _, t in pairs(game:GetService("Teams"):GetChildren()) do table.insert(TeamsList, t.Name) end
+    end)
+    local TeamDropdown = WindowTab:Dropdown({
+        Flag = "AimIgnoredTeams",
+        Title = "Ignorar Times Específicos",
+        Desc = "Selecione os times que o Aimbot NÃO deve focar.",
+        Values = TeamsList,
+        Multi = true,
+        Callback = function(v)
+            Aim.Settings.IgnoredTeams = v
+        end
+    })
+
+    local PlayersList = {}
+    for _, p in pairs(game:GetService("Players"):GetPlayers()) do 
+        if p ~= game:GetService("Players").LocalPlayer then table.insert(PlayersList, p.Name) end
+    end
+    local PlayerDropdown = WindowTab:Dropdown({
+        Flag = "AimTargetPlayers",
+        Title = "Focar Apenas Jogadores",
+        Desc = "Se selecionado, o Aimbot SÓ vai atirar nesses jogadores específicos (Whitelist).",
+        Values = PlayersList,
+        Multi = true,
+        Callback = function(v)
+            Aim.Settings.TargetPlayers = v
+        end
+    })
+
+    WindowTab:Button({
+        Title = "Atualizar Lista de Times e Jogadores",
+        Icon = "refresh-cw",
+        Callback = function()
+            local newTeams = {}
+            pcall(function()
+                for _, t in pairs(game:GetService("Teams"):GetChildren()) do table.insert(newTeams, t.Name) end
+            end)
+            TeamDropdown:Refresh(newTeams)
+            
+            local newPlayers = {}
+            for _, p in pairs(game:GetService("Players"):GetPlayers()) do 
+                if p ~= game:GetService("Players").LocalPlayer then table.insert(newPlayers, p.Name) end
+            end
+            PlayerDropdown:Refresh(newPlayers)
+        end
+    })
+
     WindowTab:Toggle({
         Flag = "AimW",
         Title = "Wall Check",

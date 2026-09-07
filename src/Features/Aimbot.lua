@@ -36,7 +36,9 @@ Aimbot.Settings = {
     SilentAim = false, -- trava o alvo sem girar a câmera (ver nota abaixo)
     Priority = "Closest", -- "Closest" (mais perto da mira) ou "LowHealth" (menor vida)
     AimKeyOnly = false, -- só mira enquanto segura AimKey, em vez de sempre que tiver alvo
-    AimKey = Enum.KeyCode.E
+    AimKey = Enum.KeyCode.E,
+    IgnoredTeams = {}, -- Tabela de times ignorados (Multi-Dropdown)
+    TargetPlayers = {} -- Tabela de players focados (Multi-Dropdown)
 }
 
 -- Marcador do alvo travado, só aparece no modo Silent Aim (pra ainda dar
@@ -68,12 +70,12 @@ do
     if ok then FOVCircle = circle end
 end
 
-local function IsVisible(part, camera)
+local function IsVisible(part, camera, targetCharacter)
     local params = RaycastParams.new()
     params.FilterDescendantsInstances = {LocalPlayer.Character, camera}
     params.FilterType = Enum.RaycastFilterType.Exclude
     local result = Workspace:Raycast(camera.CFrame.Position, part.Position - camera.CFrame.Position, params)
-    return result == nil
+    return result == nil or (result.Instance and result.Instance:IsDescendantOf(targetCharacter))
 end
 
 local function GetTarget(camera)
@@ -84,6 +86,25 @@ local function GetTarget(camera)
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(Aimbot.Settings.TargetPart) then
             if Aimbot.Settings.TeamCheck and p.Team == LocalPlayer.Team then continue end
+            local isIgnored = false
+            if p.Team then
+                for k, v in pairs(Aimbot.Settings.IgnoredTeams) do
+                    if (type(k) == "number" and v == p.Team.Name) or (type(k) == "string" and k == p.Team.Name and v == true) then
+                        isIgnored = true break
+                    end
+                end
+            end
+            if isIgnored then continue end
+            
+            local hasTargets = false
+            local isTarget = false
+            for k, v in pairs(Aimbot.Settings.TargetPlayers) do
+                hasTargets = true
+                if (type(k) == "number" and v == p.Name) or (type(k) == "string" and k == p.Name and v == true) then
+                    isTarget = true
+                end
+            end
+            if hasTargets and not isTarget then continue end
             
             local part = p.Character[Aimbot.Settings.TargetPart]
             local pos, onScreen = camera:WorldToViewportPoint(part.Position)
@@ -91,7 +112,7 @@ local function GetTarget(camera)
             if onScreen then
                 local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
                 if dist < Aimbot.Settings.FOVRadius then
-                    if Aimbot.Settings.WallCheck and not IsVisible(part, camera) then continue end
+                    if Aimbot.Settings.WallCheck and not IsVisible(part, camera, p.Character) then continue end
 
                     -- "Closest" pontua por distância até a mira (menor = melhor,
                     -- igual sempre foi). "LowHealth" pontua pela vida atual —
@@ -170,20 +191,58 @@ Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
 
     -- Aimbot Logic
     if Aimbot.Settings.Enabled then
-        -- Com AimKeyOnly ligado, só busca alvo enquanto a tecla tá
-        -- segurada — soltou, cai igualzinho no caminho de "sem alvo"
-        -- logo abaixo (devolve a câmera pro jogador).
-        local keyOk = not Aimbot.Settings.AimKeyOnly or UserInputService:IsKeyDown(Aimbot.Settings.AimKey)
+        if Aimbot.Settings.AimKeyOnly and UserInputService.TouchEnabled then
+            if not Aimbot.MobileUI then
+                Aimbot.MobileUI = Instance.new("ScreenGui", game:GetService("CoreGui"))
+                Aimbot.MobileUI.Name = "InxiterAimButton"
+                
+                local btn = Instance.new("TextButton", Aimbot.MobileUI)
+                btn.Size = UDim2.new(0, 80, 0, 80)
+                btn.Position = UDim2.new(1, -120, 0.5, 0)
+                btn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+                btn.BackgroundTransparency = 0.5
+                btn.Text = "AIM"
+                btn.TextColor3 = Color3.new(1,1,1)
+                btn.Font = Enum.Font.GothamBold
+                btn.TextSize = 20
+                
+                local corner = Instance.new("UICorner", btn)
+                corner.CornerRadius = UDim.new(1, 0)
+                
+                btn.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        Aimbot.MobileAimButtonDown = true
+                        btn.BackgroundColor3 = Color3.fromRGB(60, 255, 60)
+                    end
+                end)
+                btn.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        Aimbot.MobileAimButtonDown = false
+                        btn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+                    end
+                end)
+            end
+        else
+            if Aimbot.MobileUI then
+                Aimbot.MobileUI:Destroy()
+                Aimbot.MobileUI = nil
+                Aimbot.MobileAimButtonDown = false
+            end
+        end
+
+        local keyOk = not Aimbot.Settings.AimKeyOnly
+        if Aimbot.Settings.AimKeyOnly then
+            if UserInputService:IsKeyDown(Aimbot.Settings.AimKey) then
+                keyOk = true
+            elseif Aimbot.MobileAimButtonDown then
+                keyOk = true
+            end
+        end
+        
         local target = keyOk and GetTarget(Camera) or nil
         Aimbot.LockedTarget = target
 
         if target and Aimbot.Settings.SilentAim then
-            -- SILENT AIM: só marca o alvo internamente (LockedTarget/IsAiming)
-            -- e desenha um indicador na tela — a câmera fica 100% livre na
-            -- sua mão, nunca gira sozinha. Não existe um hook de disparo
-            -- genérico pra esse jogo, então isso não redireciona tiro
-            -- sozinho: é o modo "mira sem se mexer" pra mirar você mesmo
-            -- em cima da marcação, sem ninguém perceber a câmera travando.
             if Camera.CameraType ~= Enum.CameraType.Custom then
                 Camera.CameraType = Enum.CameraType.Custom
             end
@@ -197,11 +256,9 @@ Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
             end
         elseif target then
             if LockMarker then LockMarker.Visible = false end
-            -- Scriptable enquanto mira, senão a câmera padrão do Roblox
-            -- briga com o Lerp e fica tremendo.
             if Camera.CameraType ~= Enum.CameraType.Scriptable then
                 Camera.CameraType = Enum.CameraType.Scriptable
-                KeepTouchControlsEnabled() -- sem isso o joystick de andar some no celular
+                KeepTouchControlsEnabled()
             end
             wasAiming = true
             Aimbot.IsAiming = true
@@ -211,14 +268,17 @@ Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
         else
             if LockMarker then LockMarker.Visible = false end
             if wasAiming then
-                -- Sem alvo: devolve o controle pro jogo em vez de deixar
-                -- Scriptable travado pra sempre.
                 Camera.CameraType = Enum.CameraType.Custom
                 wasAiming = false
             end
             Aimbot.IsAiming = false
         end
     else
+        if Aimbot.MobileUI then
+            Aimbot.MobileUI:Destroy()
+            Aimbot.MobileUI = nil
+            Aimbot.MobileAimButtonDown = false
+        end
         if LockMarker then LockMarker.Visible = false end
         Aimbot.LockedTarget = nil
         if wasAiming then
@@ -253,6 +313,11 @@ function Aimbot:Unload()
     if Camera then Camera.CameraType = Enum.CameraType.Custom end
     if FOVCircle then FOVCircle:Remove() end
     if LockMarker then LockMarker:Remove() end
+    if Aimbot.MobileUI then
+        Aimbot.MobileUI:Destroy()
+        Aimbot.MobileUI = nil
+        Aimbot.MobileAimButtonDown = false
+    end
 end
 
 return Aimbot
