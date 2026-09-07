@@ -22,7 +22,7 @@ end
 
 -- [2] CONFIGURAÇÃO DE LINKS
 local REPO = "Raphael99090/1NXXITER"
-local BRANCH = "main"
+local BRANCH = "opera"
 local BASE_URL = "https://raw.githubusercontent.com/" .. REPO .. "/" .. BRANCH .. "/src/"
 
 -- ======================================================
