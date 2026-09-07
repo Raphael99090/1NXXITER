@@ -32,6 +32,10 @@ function FreeCam:Toggle(state)
     if not Camera then return end
 
     if state then
+        if Conn then Conn:Disconnect() Conn = nil end
+        if LookConn then LookConn:Disconnect() LookConn = nil end
+        if TouchEndConn then TouchEndConn:Disconnect() TouchEndConn = nil end
+
         Camera.CameraType = Enum.CameraType.Scriptable
         KeepTouchControlsEnabled() -- sem isso o joystick de andar some no celular
         Rot = Vector2.new(0, 0)

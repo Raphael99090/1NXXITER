@@ -49,11 +49,15 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
 
     if State.IsRunning then 
         State.IsRunning = false 
+        self._currentRunId = nil
         if updateUI then updateUI("STATUS: PAUSADO") end
         return 
     end
 
     State.IsRunning = true
+    local runId = {}
+    self._currentRunId = runId
+
     task.spawn(function()
         local ok, err = pcall(function()
             local step = Config.IsCountdown and -1 or 1
@@ -64,7 +68,7 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
             local currentError = 0
 
             for i = Config.StartNum, finish, step do
-                if not State.IsRunning or not State.IsActive then break end
+                if not State.IsRunning or not State.IsActive or self._currentRunId ~= runId then break end
                 
                 local mode = Config.Mode or "Canguru"
                 if updateUI then updateUI(mode .. " — Contagem: " .. tostring(i)) end
@@ -148,6 +152,7 @@ end
 -- pra pausar. IsActive no State também nunca era setado false em lugar
 -- nenhum, então aquele check já existente no loop nunca disparava de verdade.
 function AutoTrain:Unload()
+    self._currentRunId = nil
     if self._state then
         self._state.IsRunning = false
         self._state.IsActive = false

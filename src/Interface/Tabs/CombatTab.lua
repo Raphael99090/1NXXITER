@@ -5,6 +5,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Section({
         Title = "Aimbot Master",
+        Desc = "Domine o combate com mira automática.",
         Icon = "crosshair"
     })
 
@@ -32,6 +33,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Toggle({
         Flag = "AimE",
         Title = "Ativar Auto-Mira",
+        Desc = "Ativa o funcionamento geral do Aimbot.",
         Icon = "crosshair",
         Value = false,
         Callback = function(v)
@@ -42,6 +44,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Toggle({
         Flag = "AimSilent",
         Title = "Silent Aim (não gira a câmera)",
+        Desc = "O tiro vai no alvo, mas sua câmera continua livre.",
         Icon = "target",
         Value = false,
         Callback = function(v)
@@ -52,6 +55,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Toggle({
         Flag = "AimKeyOnly",
         Title = "Só mirar segurando E",
+        Desc = "Se ativo, o aimbot só trava quando você segura a tecla (E no PC, botão custom no Mobile).",
         Icon = "keyboard",
         Value = false,
         Callback = function(v)
@@ -62,6 +66,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Dropdown({
         Flag = "AimPriority",
         Title = "Prioridade de Alvo",
+        Desc = "Define quem o Aimbot deve focar primeiro.",
         Values = {
             "Mais perto da mira",
             "Menor vida"
@@ -76,6 +81,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Toggle({
         Flag = "AimTeam",
         Title = "Ignorar Time",
+        Desc = "Não mira em jogadores que estão no mesmo time que você.",
         Icon = "users",
         Value = false,
         Callback = function(v)
@@ -86,6 +92,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Toggle({
         Flag = "AimW",
         Title = "Wall Check",
+        Desc = "Ignora jogadores que estão atrás de paredes.",
         Icon = "scan-eye",
         Value = true,
         Callback = function(v)
@@ -96,6 +103,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Toggle({
         Flag = "AimFOVShow",
         Title = "Mostrar Círculo do FOV",
+        Desc = "Desenha o raio de detecção na sua tela.",
         Icon = "circle-dot",
         Value = false,
         Callback = function(v)
@@ -106,6 +114,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Slider({
         Flag = "AimS",
         Title = "Suavidade",
+        Desc = "Velocidade que a câmera puxa para o alvo (menor = mais travado).",
         Step = 0.1,
         Value = {
             Min = 0.1,
@@ -120,6 +129,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Slider({
         Flag = "AimF",
         Title = "Raio do FOV",
+        Desc = "Tamanho da área de busca de alvos na tela.",
         Step = 1,
         Value = {
             Min = 30,
@@ -133,12 +143,14 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Section({
         Title = "Hitbox Expander",
+        Desc = "Aumenta o tamanho dos inimigos para facilitar o acerto.",
         Icon = "scan"
     })
 
     WindowTab:Toggle({
         Flag = "HitE",
         Title = "Aumentar Hitbox",
+        Desc = "Ativa a expansão da área de dano dos outros jogadores.",
         Icon = "expand",
         Value = false,
         Callback = function(v)
@@ -149,6 +161,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Slider({
         Flag = "HitS",
         Title = "Tamanho da Hitbox",
+        Desc = "Define quão gigante o hitbox vai ficar.",
         Step = 1,
         Value = {
             Min = 2,

@@ -2,7 +2,7 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
-## [Não lançado]
+## [3.0.0] - 2026-09-07
 
 ### Segurança
 - **Keys premium não ficam mais em texto puro no `keys.json`**: como esse arquivo é público (GitHub raw/Pages), guardar a key crua como índice do JSON deixava qualquer um que abrisse a página ler a lista inteira de keys vendidas e usá-las de graça. Agora só o **hash SHA-256** da key fica salvo — implementado um SHA-256 puro em Lua no `main.lua` (sem libs externas, já que o loader roda antes do sistema de módulos existir) e via Web Crypto (`crypto.subtle.digest`) no painel admin, os dois batendo o mesmo hash. Rodei os dois contra vetores de teste oficiais do SHA-256 antes de subir. O painel admin agora deixa claro que a key só aparece na hora da criação — depois só o hash fica recuperável.

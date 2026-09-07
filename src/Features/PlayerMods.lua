@@ -1,4 +1,3 @@
-
 local PlayerMods = {}
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -16,27 +15,56 @@ PlayerMods.Settings = {
 local VOID_Y = -500 -- abaixo disso conta como "caiu do mapa"
 
 local FlyBV = nil
-local flyUpPulseUntil = 0 -- sem teclado (touch), o botão de pulo dá um empurrão pra cima por um instante
+local flyUpPulseUntil = 0
 local lastSafeCFrame = nil
+
+local originalStates = {
+    Speed = nil,
+    JumpPower = nil,
+    JumpHeight = nil,
+    UseJumpPower = nil,
+    Collisions = {} -- [part] = original CanCollide boolean
+}
 
 local function GetHumanoid()
     return LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 end
 
--- Cache das partes do personagem pro noclip, atualizado só quando o
--- personagem muda (respawn) — em vez de rodar GetDescendants() a cada frame.
 local cachedParts = {}
 local function RefreshCharacterPartsCache(char)
     cachedParts = {}
+    originalStates.Collisions = {}
     if not char then return end
+    
     for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then table.insert(cachedParts, part) end
+        if part:IsA("BasePart") then 
+            table.insert(cachedParts, part)
+            originalStates.Collisions[part] = part.CanCollide
+            if PlayerMods.Settings.Noclip then part.CanCollide = false end
+        end
+    end
+    
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        originalStates.Speed = hum.WalkSpeed
+        originalStates.JumpPower = hum.JumpPower
+        originalStates.JumpHeight = hum.JumpHeight
+        originalStates.UseJumpPower = hum.UseJumpPower
+    end
+    
+    if PlayerMods.Settings.Fly then
+        task.defer(function() PlayerMods:ToggleFly(true) end)
+    end
+    if PlayerMods.Settings.AntiVoid then
+        lastSafeCFrame = nil
     end
 end
 
 local function RestoreCollisions()
     for _, part in pairs(cachedParts) do
-        if part and part.Parent then part.CanCollide = true end
+        if part and part.Parent and originalStates.Collisions[part] ~= nil then 
+            part.CanCollide = originalStates.Collisions[part] 
+        end
     end
 end
 
@@ -44,10 +72,6 @@ local Connections = {}
 
 if LocalPlayer.Character then RefreshCharacterPartsCache(LocalPlayer.Character) end
 
--- Antes eram duas conexões separadas ao mesmo CharacterAdded (uma só pra
--- atualizar o cache, outra só pra escutar DescendantAdded) — junto em uma
--- só, e agora a conexão de DescendantAdded do char anterior é desconectada
--- no respawn seguinte em vez de empilhar uma nova a cada morte.
 local descendantConn = nil
 table.insert(Connections, LocalPlayer.CharacterAdded:Connect(function(char)
     RefreshCharacterPartsCache(char)
@@ -56,28 +80,34 @@ table.insert(Connections, LocalPlayer.CharacterAdded:Connect(function(char)
     descendantConn = char.DescendantAdded:Connect(function(desc)
         if desc:IsA("BasePart") then
             table.insert(cachedParts, desc)
+            originalStates.Collisions[desc] = desc.CanCollide
             if PlayerMods.Settings.Noclip then desc.CanCollide = false end
+        elseif desc:IsA("Humanoid") then
+            -- Captura imediata antes do RenderStepped alterar
+            originalStates.Speed = desc.WalkSpeed
+            originalStates.JumpPower = desc.JumpPower
+            originalStates.JumpHeight = desc.JumpHeight
+            originalStates.UseJumpPower = desc.UseJumpPower
         end
     end)
 end))
 
--- Loop de persistência (Garante que o Speed/Jump não resete ao morrer)
 table.insert(Connections, RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     local hum = GetHumanoid()
     local root = char and char:FindFirstChild("HumanoidRootPart")
 
     if hum then
-        if PlayerMods.Settings.SpeedEnabled then hum.WalkSpeed = PlayerMods.Settings.SpeedValue end
+        if PlayerMods.Settings.SpeedEnabled then 
+            hum.WalkSpeed = PlayerMods.Settings.SpeedValue 
+        end
+        
         if PlayerMods.Settings.JumpEnabled then 
             hum.UseJumpPower = true
             hum.JumpPower = PlayerMods.Settings.JumpValue 
         end
     end
 
-    -- Fly: reaproveita o MoveDirection que o próprio Roblox já calcula a
-    -- partir do WASD/joystick (funciona igual em PC e touch), soma o
-    -- vertical via teclado (Espaço/Ctrl) ou o pulso do botão de pulo.
     if PlayerMods.Settings.Fly and root and FlyBV then
         local moveDir = hum and hum.MoveDirection or Vector3.new()
         local vertical = 0
@@ -91,9 +121,6 @@ table.insert(Connections, RunService.RenderStepped:Connect(function()
         FlyBV.Velocity = (moveDir * PlayerMods.Settings.FlySpeed) + Vector3.new(0, vertical * PlayerMods.Settings.FlySpeed, 0)
     end
 
-    -- Anti-Void: só marca "posição segura" quando tá de pé em algo de
-    -- verdade (senão salvaria posição no meio da queda). Se cair abaixo
-    -- do limite do mapa, teleporta de volta pra última posição segura.
     if PlayerMods.Settings.AntiVoid and root then
         if hum and hum.FloorMaterial ~= Enum.Material.Air and root.Position.Y > VOID_Y then
             lastSafeCFrame = root.CFrame
@@ -103,7 +130,6 @@ table.insert(Connections, RunService.RenderStepped:Connect(function()
     end
 end))
 
--- Loop de Noclip (usa o cache em vez de varrer o personagem todo frame)
 table.insert(Connections, RunService.Stepped:Connect(function()
     if PlayerMods.Settings.Noclip then
         for _, part in pairs(cachedParts) do
@@ -112,7 +138,6 @@ table.insert(Connections, RunService.Stepped:Connect(function()
     end
 end))
 
--- Pulo Infinito
 table.insert(Connections, UserInputService.JumpRequest:Connect(function()
     if PlayerMods.Settings.InfJump then
         local hum = GetHumanoid()
@@ -123,8 +148,40 @@ table.insert(Connections, UserInputService.JumpRequest:Connect(function()
     end
 end))
 
-function PlayerMods:ToggleSpeed(v) self.Settings.SpeedEnabled = v end
-function PlayerMods:ToggleJumpPower(v) self.Settings.JumpEnabled = v end
+function PlayerMods:ToggleSpeed(v) 
+    self.Settings.SpeedEnabled = v 
+    if v then
+        local hum = GetHumanoid()
+        if hum and hum.WalkSpeed ~= self.Settings.SpeedValue then
+            originalStates.Speed = hum.WalkSpeed
+        end
+    else
+        local hum = GetHumanoid()
+        if hum and originalStates.Speed ~= nil then
+            hum.WalkSpeed = originalStates.Speed
+        end
+    end
+end
+
+function PlayerMods:ToggleJumpPower(v) 
+    self.Settings.JumpEnabled = v 
+    if v then
+        local hum = GetHumanoid()
+        if hum and hum.JumpPower ~= self.Settings.JumpValue then
+            originalStates.JumpPower = hum.JumpPower
+            originalStates.JumpHeight = hum.JumpHeight
+            originalStates.UseJumpPower = hum.UseJumpPower
+        end
+    else
+        local hum = GetHumanoid()
+        if hum and originalStates.UseJumpPower ~= nil then
+            hum.UseJumpPower = originalStates.UseJumpPower
+            hum.JumpPower = originalStates.JumpPower
+            hum.JumpHeight = originalStates.JumpHeight
+        end
+    end
+end
+
 function PlayerMods:ToggleNoclip(v)
     self.Settings.Noclip = v
     if not v then RestoreCollisions() end
@@ -138,7 +195,7 @@ function PlayerMods:ToggleFly(v)
     local root = char and char:FindFirstChild("HumanoidRootPart")
 
     if v then
-        if not root then self.Settings.Fly = false return end
+        if not root then return end
         if not FlyBV then
             FlyBV = Instance.new("BodyVelocity")
             FlyBV.Name = "InxiterFly"
@@ -155,24 +212,16 @@ end
 
 function PlayerMods:ToggleAntiVoid(v)
     self.Settings.AntiVoid = v
-    lastSafeCFrame = nil
+    if not v then lastSafeCFrame = nil end
 end
 
 function PlayerMods:DisableAll()
-    self.Settings.SpeedEnabled = false
-    self.Settings.JumpEnabled = false
-    self.Settings.Noclip = false
-    self.Settings.InfJump = false
-    self.Settings.Fly = false
-    self.Settings.AntiVoid = false
-    RestoreCollisions()
-    if FlyBV then FlyBV.Parent = nil end
-    local hum = GetHumanoid()
-    if hum then
-        hum.WalkSpeed = 16
-        hum.JumpPower = 50
-        hum.PlatformStand = false
-    end
+    self:ToggleSpeed(false)
+    self:ToggleJumpPower(false)
+    self:ToggleNoclip(false)
+    self:ToggleInfJump(false)
+    self:ToggleFly(false)
+    self:ToggleAntiVoid(false)
 end
 
 function PlayerMods:Unload()
@@ -181,6 +230,8 @@ function PlayerMods:Unload()
     Connections = {}
     if descendantConn then descendantConn:Disconnect() descendantConn = nil end
     if FlyBV then FlyBV:Destroy() FlyBV = nil end
+    cachedParts = {}
+    originalStates.Collisions = {}
 end
 
 return PlayerMods

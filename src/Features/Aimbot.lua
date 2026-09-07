@@ -143,6 +143,16 @@ Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
                 root.CanCollide = false
             end
         end
+        -- Cleanup players that left or respawned
+        for p, origSize in pairs(originalHitboxes) do
+            if not p.Parent or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
+                originalHitboxes[p] = nil
+            elseif p.Character.HumanoidRootPart.Size == origSize then
+                -- if somehow it was reset, we clear it so we can capture it again if needed
+                -- this prevents the table holding onto old references forever
+                originalHitboxes[p] = nil
+            end
+        end
     elseif next(originalHitboxes) then
         -- Restaura hitboxes originais quando desligado
         for p, origSize in pairs(originalHitboxes) do

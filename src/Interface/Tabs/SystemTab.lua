@@ -23,12 +23,14 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Section({
         Title = "Aparência",
+        Desc = "Personalize a cor e o visual do painel.",
         Icon = "palette"
     })
 
     WindowTab:Dropdown({
         Flag = "UITheme",
         Title = "Tema",
+        Desc = "Escolha o estilo de cores da interface.",
         Values = (function()
             local names = {}
             for name in pairs(WindUI:GetThemes()) do
@@ -46,11 +48,13 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Section({
         Title = "Gerenciamento",
+        Desc = "Controle o salvamento e restauração das configurações.",
         Icon = "folder-cog"
     })
 
     WindowTab:Button({
         Title = "SALVAR CONFIGURAÇÕES",
+        Desc = "Força o salvamento imediato das configurações atuais.",
         Icon = "save",
         IconAlign = "Left",
         Callback = function()
@@ -66,6 +70,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Button({
         Title = "RESTAURAR PADRÕES",
+        Desc = "Apaga as configurações salvas e volta ao formato original.",
         Icon = "rotate-ccw",
         IconAlign = "Left",
         Callback = function()
@@ -83,6 +88,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Toggle({
         Flag = "AutoRejoinE",
         Title = "Auto-Rejoin (ao cair do servidor)",
+        Desc = "Tenta voltar para a partida automaticamente caso o Roblox feche por erro de conexão ou kick.",
         Value = Config.AutoRejoin or false,
         Callback = function(v)
             Config.AutoRejoin = v
@@ -91,11 +97,13 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Section({
         Title = "Utilitários",
+        Desc = "Ferramentas gerais para o jogo.",
         Icon = "wrench"
     })
 
     WindowTab:Button({
         Title = "FPS BOOST",
+        Desc = "Remove texturas e efeitos pesados do mapa para aumentar o desempenho.",
         Icon = "zap",
         IconAlign = "Left",
         Callback = function()
@@ -105,6 +113,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Button({
         Title = "REJOIN",
+        Desc = "Sai e entra novamente no mesmo servidor.",
         Icon = "refresh-cw",
         IconAlign = "Left",
         Callback = function()
@@ -114,6 +123,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Button({
         Title = "SERVER HOP",
+        Desc = "Troca de servidor (procura um com poucos jogadores).",
         Icon = "globe",
         IconAlign = "Left",
         Callback = function()
@@ -127,6 +137,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Section({
         Title = "Discord",
+        Desc = "Junte-se à nossa comunidade.",
         Icon = "messages-square"
     })
 
@@ -176,11 +187,13 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     WindowTab:Section({
         Title = "Sistema",
+        Desc = "Encerramento do painel.",
         Icon = "power"
     })
 
     WindowTab:Button({
         Title = "FECHAR HUB",
+        Desc = "Desativa tudo e remove a interface da tela.",
         Icon = "power",
         IconAlign = "Left",
         Callback = function()
