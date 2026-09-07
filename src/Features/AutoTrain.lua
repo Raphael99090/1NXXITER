@@ -15,13 +15,15 @@ end)
 -- Tenta enviar pelo sistema certo, com fallback pro outro.
 local function SendChat(message)
     if usingTextChatService then
-        local ok = pcall(function()
+        local sent = false
+        pcall(function()
             local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
             if channel then
                 channel:SendAsync(message)
+                sent = true
             end
         end)
-        if ok then return true end
+        if sent then return true end
     end
 
     -- Legacy chat (jogos que ainda usam o sistema antigo)
@@ -56,8 +58,8 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
         local ok, err = pcall(function()
             local step = Config.IsCountdown and -1 or 1
             local finish = Config.IsCountdown 
-                and (Config.StartNum - Config.Quantity) 
-                or  (Config.StartNum + Config.Quantity)
+                and (Config.StartNum - Config.Quantity + 1) 
+                or  (Config.StartNum + Config.Quantity - 1)
 
             local currentError = 0
 
@@ -110,7 +112,7 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
                                 local oldAutoRotate = hum.AutoRotate
                                 hum.AutoRotate = false
                                 for j = 1, spinSteps do
-                                    if hrp then
+                                    if hrp and hrp.Parent then
                                         hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(anglePerStep), 0)
                                     end
                                     task.wait(spinWait)

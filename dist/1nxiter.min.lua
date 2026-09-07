@@ -93,7 +93,7 @@ Title ="1NXITER HUB",
 Author ="Panda Key System",
 Icon ="key",
 Folder ="InxiterHub",
-Size =UDim2.fromOffset(450,320),
+Size =UDim2.fromOffset(400,240),
 OpenButton =false,
 Transparent =true,
 Theme ="Dark"
@@ -120,18 +120,6 @@ pcall(aa,al)
 w:Notify({Title ="Key System",Content ="Link copiado para a área de transferência!",Duration =3})
 else
 w:Notify({Title ="Key System",Content ="Abra: "..al,Duration =5})
-end
-end
-})
-u:Button({
-Title ="Copiar HWID",
-Desc =ag,
-Icon ="copy",
-Callback =function()
-local aa =setclipboard or toclipboard
-if type(aa)=="function"then
-pcall(aa,ag)
-w:Notify({Title ="Key System",Content ="HWID copiado!",Duration =3})
 end
 end
 })
@@ -653,13 +641,15 @@ x =f.ChatVersion ==Enum.ChatVersion.TextChatService
 end)
 local function e(message)
 if x then
-local q =pcall(function()
+local s =false
+pcall(function()
 local h =f.TextChannels:FindFirstChild("RBXGeneral")
 if h then
 h:SendAsync(message)
+s =true
 end
 end)
-if q then return true end
+if s then return true end
 end
 local q =pcall(function()
 game:GetService("ReplicatedStorage")
@@ -686,8 +676,8 @@ task.spawn(function()
 local q,j =pcall(function()
 local v =Config.IsCountdown and -1 or 1
 local l =Config.IsCountdown 
-and (Config.StartNum -Config.Quantity)
-or (Config.StartNum +Config.Quantity)
+and (Config.StartNum -Config.Quantity +1)
+or (Config.StartNum +Config.Quantity -1)
 local i =0
 for i =Config.StartNum,l,v do
 if not State.IsRunning or not State.IsActive then break end
@@ -721,7 +711,7 @@ local g =w /t
 local r =n.AutoRotate
 n.AutoRotate =false
 for j =1,t do
-if m then
+if m and m.Parent then
 m.CFrame =m.CFrame *CFrame.Angles(0,math.rad(g),0)
 end
 task.wait(u)
