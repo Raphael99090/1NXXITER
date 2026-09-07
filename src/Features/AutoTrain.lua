@@ -33,6 +33,13 @@ local function SendChat(message)
     return ok
 end
 
+local vim = game:GetService("VirtualInputManager")
+local function PressKey(key, holdTime)
+    vim:SendKeyEvent(true, key, false, game)
+    task.wait(holdTime or 0.05)
+    vim:SendKeyEvent(false, key, false, game)
+end
+
 function AutoTrain:Toggle(Config, State, Hub, updateUI)
     -- Guarda a referência do State: sem isso, Unload() não tinha como
     -- parar o loop que já estava rodando em segundo plano (task.spawn).
@@ -52,6 +59,8 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
                 and (Config.StartNum - Config.Quantity) 
                 or  (Config.StartNum + Config.Quantity)
 
+            local currentError = 0
+
             for i = Config.StartNum, finish, step do
                 if not State.IsRunning or not State.IsActive then break end
                 
@@ -70,16 +79,46 @@ function AutoTrain:Toggle(Config, State, Hub, updateUI)
                 -- Ação física conforme o modo de exercício
                 if Player.Character and Player.Character:FindFirstChild("Humanoid") then
                     local hum = Player.Character.Humanoid
+                    local hrp = Player.Character:FindFirstChild("HumanoidRootPart")
 
                     if mode == "Canguru" then
-                        -- Pulo + agachar (se AutoCrouch estiver ligado)
+                        -- Agachar e levantar ANTES do pulo se AutoCrouch estiver ligado
+                        if Config.AutoCrouch then
+                            -- Abaixa
+                            PressKey(Enum.KeyCode.C)
+                            task.wait(0.4) -- tempo abaixado
+                            
+                            -- Levanta
+                            PressKey(Enum.KeyCode.C)
+                            task.wait(0.2) -- tempo antes de pular
+                        end
+                        
+                        -- Só depois pula com giro 360 e erro compensado
                         hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                        
+                        if hrp then
+                            local errorAngle = math.random(2, 6)
+                            if math.random() > 0.5 then errorAngle = -errorAngle end
+                            
+                            local totalSpin = 360 - currentError + errorAngle
+                            currentError = errorAngle
+                            
+                            task.spawn(function()
+                                local spinSteps = 12
+                                local spinWait = 0.4 / spinSteps
+                                local anglePerStep = totalSpin / spinSteps
+                                for j = 1, spinSteps do
+                                    if hrp then
+                                        hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(anglePerStep), 0)
+                                    end
+                                    task.wait(spinWait)
+                                end
+                            end)
+                        end
                     elseif mode == "Flexão" then
-                        -- Simula flexão: agacha e levanta
-                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                        -- Flexão não pula mais
                     elseif mode == "Polichinelo" then
-                        -- Simula polichinelo: pulo
-                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                        -- Polichinelo não pula mais
                     end
                 end
                 

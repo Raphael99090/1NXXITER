@@ -155,185 +155,99 @@ end
 -- INTERFACE DA KEY GATE
 -- ======================================================
 local function RequestKey(onSuccess)
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
     local hwid = GetHWID()
+    
+    local success, WindUI = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+    end)
 
-    local KeyGui = Instance.new("ScreenGui")
-    KeyGui.Name = "InxiterKeyGate"
-    KeyGui.ResetOnSpawn = false
-    KeyGui.IgnoreGuiInset = true
-    KeyGui.Parent = PlayerGui
-
-    local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0, 320, 0, 280)
-    Frame.Position = UDim2.new(0.5, -160, 0.5, -140)
-    Frame.BackgroundColor3 = Color3.fromRGB(25, 15, 35)
-    Frame.BorderSizePixel = 0
-    Frame.Parent = KeyGui
-
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 12)
-    Corner.Parent = Frame
-
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 36)
-    Title.BackgroundTransparency = 1
-    Title.Text = "🔑 1NXITER HUB"
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 16
-    Title.TextColor3 = Color3.new(1, 1, 1)
-    Title.Parent = Frame
-
-    -- Input da key
-    local Input = Instance.new("TextBox")
-    Input.Size = UDim2.new(1, -30, 0, 34)
-    Input.Position = UDim2.new(0, 15, 0, 42)
-    Input.BackgroundColor3 = Color3.fromRGB(40, 25, 55)
-    Input.TextColor3 = Color3.new(1, 1, 1)
-    Input.PlaceholderText = "Cole sua key aqui..."
-    Input.Text = ""
-    Input.ClearTextOnFocus = false
-    Input.Font = Enum.Font.Gotham
-    Input.TextSize = 14
-    Input.Parent = Frame
-    Instance.new("UICorner", Input).CornerRadius = UDim.new(0, 6)
-
-    -- Botão Confirmar
-    local Confirm = Instance.new("TextButton")
-    Confirm.Size = UDim2.new(1, -30, 0, 34)
-    Confirm.Position = UDim2.new(0, 15, 0, 84)
-    Confirm.BackgroundColor3 = Color3.fromRGB(120, 60, 200)
-    Confirm.Text = "Confirmar"
-    Confirm.Font = Enum.Font.GothamBold
-    Confirm.TextSize = 14
-    Confirm.TextColor3 = Color3.new(1, 1, 1)
-    Confirm.Parent = Frame
-    Instance.new("UICorner", Confirm).CornerRadius = UDim.new(0, 6)
-
-    -- Botão Obter Key (abre Panda GetKey)
-    local GetKeyBtn = Instance.new("TextButton")
-    GetKeyBtn.Size = UDim2.new(1, -30, 0, 30)
-    GetKeyBtn.Position = UDim2.new(0, 15, 0, 124)
-    GetKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 35, 70)
-    GetKeyBtn.Text = "🔗 OBTER KEY (Panda)"
-    GetKeyBtn.Font = Enum.Font.GothamBold
-    GetKeyBtn.TextSize = 12
-    GetKeyBtn.TextColor3 = Color3.fromRGB(180, 140, 255)
-    GetKeyBtn.Parent = Frame
-    Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 6)
-
-    -- HWID display
-    local HwidLabel = Instance.new("TextLabel")
-    HwidLabel.Size = UDim2.new(1, -80, 0, 24)
-    HwidLabel.Position = UDim2.new(0, 15, 0, 164)
-    HwidLabel.BackgroundTransparency = 1
-    HwidLabel.Text = "HWID: " .. string.sub(hwid, 1, 22) .. (string.len(hwid) > 22 and "..." or "")
-    HwidLabel.Font = Enum.Font.Code
-    HwidLabel.TextSize = 10
-    HwidLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-    HwidLabel.TextXAlignment = Enum.TextXAlignment.Left
-    HwidLabel.Parent = Frame
-
-    -- Botão Copiar HWID
-    local CopyHwid = Instance.new("TextButton")
-    CopyHwid.Size = UDim2.new(0, 55, 0, 20)
-    CopyHwid.Position = UDim2.new(1, -70, 0, 166)
-    CopyHwid.BackgroundColor3 = Color3.fromRGB(50, 35, 70)
-    CopyHwid.Text = "Copiar"
-    CopyHwid.Font = Enum.Font.Gotham
-    CopyHwid.TextSize = 10
-    CopyHwid.TextColor3 = Color3.fromRGB(180, 140, 255)
-    CopyHwid.Parent = Frame
-    Instance.new("UICorner", CopyHwid).CornerRadius = UDim.new(0, 4)
-
-    -- Label de erro
-    local ErrorLabel = Instance.new("TextLabel")
-    ErrorLabel.Size = UDim2.new(1, -30, 0, 40)
-    ErrorLabel.Position = UDim2.new(0, 15, 0, 192)
-    ErrorLabel.BackgroundTransparency = 1
-    ErrorLabel.Text = ""
-    ErrorLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
-    ErrorLabel.Font = Enum.Font.Gotham
-    ErrorLabel.TextSize = 11
-    ErrorLabel.TextWrapped = true
-    ErrorLabel.TextYAlignment = Enum.TextYAlignment.Top
-    ErrorLabel.Parent = Frame
-
-    -- Info extra
-    local InfoLabel = Instance.new("TextLabel")
-    InfoLabel.Size = UDim2.new(1, -30, 0, 20)
-    InfoLabel.Position = UDim2.new(0, 15, 1, -26)
-    InfoLabel.BackgroundTransparency = 1
-    InfoLabel.Text = "Panda Key System · pandadevelopment.net"
-    InfoLabel.Font = Enum.Font.Gotham
-    InfoLabel.TextSize = 10
-    InfoLabel.TextColor3 = Color3.fromRGB(80, 80, 80)
-    InfoLabel.Parent = Frame
-
-    -- ══════════════════════════════════════════
-    -- EVENTOS
-    -- ══════════════════════════════════════════
-    local checking = false
-
-    local function TryKey()
-        if checking then return end
-        local keyText = Input.Text
-        if keyText == "" then
-            ErrorLabel.Text = "Cola sua key aí antes de confirmar."
-            return
-        end
-
-        checking = true
-        Confirm.Text = "Verificando..."
-        ErrorLabel.Text = ""
-
-        CheckKey(keyText, function(valid, errorMsg)
-            checking = false
-            if valid then
-                KeyGui:Destroy()
-                onSuccess()
-            else
-                Confirm.Text = "Confirmar"
-                ErrorLabel.Text = errorMsg or "Key inválida. Tenta de novo."
-                Input.Text = ""
-            end
-        end)
+    if not success or not WindUI then
+        warn("❌ [1NXITER]: Falha ao carregar a biblioteca WindUI para o Key System.")
+        return
     end
 
-    Confirm.MouseButton1Click:Connect(TryKey)
-    Input.FocusLost:Connect(function(enterPressed)
-        if enterPressed then TryKey() end
-    end)
+    local Window = WindUI:CreateWindow({
+        Title = "1NXITER HUB",
+        Author = "Panda Key System",
+        Icon = "key",
+        Folder = "InxiterHub",
+        Size = UDim2.fromOffset(450, 320),
+        OpenButton = false,
+        Transparent = true,
+        Theme = "Dark"
+    })
 
-    -- Obter Key: copia o link do Panda GetKey (com HWID pra travar a key)
-    GetKeyBtn.MouseButton1Click:Connect(function()
-        local pandaUrl = PANDA_GETKEY_BASE .. "?hwid=" .. hwid
-        local copier = setclipboard or toclipboard
-        if type(copier) == "function" then
-            pcall(copier, pandaUrl)
-            ErrorLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-            ErrorLabel.Text = "Link copiado! Cole no navegador."
-        else
-            ErrorLabel.TextColor3 = Color3.fromRGB(180, 140, 255)
-            ErrorLabel.Text = "Abra: " .. pandaUrl
-        end
-        task.delay(4, function()
-            ErrorLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
-            ErrorLabel.Text = ""
-        end)
-    end)
+    local Tab = Window:Tab({ Title = "Autenticação", Icon = "lock" })
+    
+    local KeyInput = ""
 
-    -- Copiar HWID
-    CopyHwid.MouseButton1Click:Connect(function()
-        local copier = setclipboard or toclipboard
-        if type(copier) == "function" then
-            pcall(copier, hwid)
-            CopyHwid.Text = "✅"
-            task.delay(2, function() CopyHwid.Text = "Copiar" end)
+    Tab:Input({
+        Title = "Insira sua Key",
+        Desc = "Cole a key gerada pelo Panda Auth abaixo.",
+        PlaceholderText = "Cole aqui...",
+        Callback = function(text)
+            KeyInput = text
         end
-    end)
+    })
+
+    Tab:Button({
+        Title = "Obter Key (Copiar Link)",
+        Desc = "Copia o link para o seu navegador.",
+        Icon = "link",
+        Callback = function()
+            local pandaUrl = PANDA_GETKEY_BASE .. "?hwid=" .. hwid
+            local copier = setclipboard or toclipboard
+            if type(copier) == "function" then
+                pcall(copier, pandaUrl)
+                WindUI:Notify({Title = "Key System", Content = "Link copiado para a área de transferência!", Duration = 3})
+            else
+                WindUI:Notify({Title = "Key System", Content = "Abra: " .. pandaUrl, Duration = 5})
+            end
+        end
+    })
+    
+    Tab:Button({
+        Title = "Copiar HWID",
+        Desc = hwid,
+        Icon = "copy",
+        Callback = function()
+            local copier = setclipboard or toclipboard
+            if type(copier) == "function" then
+                pcall(copier, hwid)
+                WindUI:Notify({Title = "Key System", Content = "HWID copiado!", Duration = 3})
+            end
+        end
+    })
+
+    local checking = false
+    Tab:Button({
+        Title = "Validar e Entrar",
+        Icon = "check",
+        Callback = function()
+            if checking then return end
+            if KeyInput == "" then
+                WindUI:Notify({Title = "Aviso", Content = "Insira sua key antes de confirmar.", Duration = 3})
+                return
+            end
+
+            checking = true
+            WindUI:Notify({Title = "Key System", Content = "Verificando key...", Duration = 2})
+
+            CheckKey(KeyInput, function(valid, errorMsg)
+                checking = false
+                if valid then
+                    WindUI:Notify({Title = "Sucesso", Content = "Key validada! Carregando Hub...", Duration = 2})
+                    task.wait(1.5)
+                    pcall(function() Window:Destroy() end)
+                    onSuccess()
+                else
+                    WindUI:Notify({Title = "Erro", Content = errorMsg or "Key inválida. Tente novamente.", Duration = 4})
+                end
+            end)
+        end
+    })
+    
+    Tab:Select()
 end
 
 -- [3] ESTRUTURA CENTRAL (Tabela Hub)
