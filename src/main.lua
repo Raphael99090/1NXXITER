@@ -171,7 +171,7 @@ local function RequestKey(onSuccess)
         Author = "Panda Key System",
         Icon = "key",
         Folder = "InxiterHub",
-        Size = UDim2.fromOffset(450, 320),
+        Size = UDim2.fromOffset(400, 240),
         OpenButton = false,
         Transparent = true,
         Theme = "Dark"
@@ -202,19 +202,6 @@ local function RequestKey(onSuccess)
                 WindUI:Notify({Title = "Key System", Content = "Link copiado para a área de transferência!", Duration = 3})
             else
                 WindUI:Notify({Title = "Key System", Content = "Abra: " .. pandaUrl, Duration = 5})
-            end
-        end
-    })
-    
-    Tab:Button({
-        Title = "Copiar HWID",
-        Desc = hwid,
-        Icon = "copy",
-        Callback = function()
-            local copier = setclipboard or toclipboard
-            if type(copier) == "function" then
-                pcall(copier, hwid)
-                WindUI:Notify({Title = "Key System", Content = "HWID copiado!", Duration = 3})
             end
         end
     })
