@@ -93,6 +93,8 @@ table.insert(Connections, LocalPlayer.CharacterAdded:Connect(function(char)
 end))
 
 table.insert(Connections, RunService.RenderStepped:Connect(function()
+    if not PlayerMods.Settings.SpeedEnabled and not PlayerMods.Settings.JumpEnabled and not PlayerMods.Settings.Fly and not PlayerMods.Settings.AntiVoid then return end
+    
     local char = LocalPlayer.Character
     local hum = GetHumanoid()
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -131,10 +133,9 @@ table.insert(Connections, RunService.RenderStepped:Connect(function()
 end))
 
 table.insert(Connections, RunService.Stepped:Connect(function()
-    if PlayerMods.Settings.Noclip then
-        for _, part in pairs(cachedParts) do
-            if part and part.Parent then part.CanCollide = false end
-        end
+    if not PlayerMods.Settings.Noclip then return end
+    for _, part in pairs(cachedParts) do
+        if part and part.Parent then part.CanCollide = false end
     end
 end))
 

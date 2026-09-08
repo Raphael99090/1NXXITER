@@ -8,12 +8,8 @@ end
 
 local function CopyToClipboard(text)
     local copier = setclipboard or toclipboard
-    if type(copier) ~= "function" then
-        return false
-    end
-
-    local ok = pcall(copier, text)
-    return ok
+    if type(copier) ~= "function" then return false end
+    return pcall(copier, text)
 end
 
 function Tab:Render(WindowTab, Hub, Config, State)
@@ -21,187 +17,55 @@ function Tab:Render(WindowTab, Hub, Config, State)
     local StateMod = Hub.Core.State
     local WindUI = Hub.UI.Library
 
-    WindowTab:Section({
-        Title = "Aparência",
-        Desc = "Personalize a cor e o visual do painel.",
-        Icon = "palette"
-    })
-
+    WindowTab:Section({ Title = "Aparência", Desc = "Mude o estilo visual do menu.", Icon = "palette" })
+    
     WindowTab:Dropdown({
-        Flag = "UITheme",
-        Title = "Tema",
-        Desc = "Escolha o estilo de cores da interface.",
-        Values = (function()
-            local names = {}
-            for name in pairs(WindUI:GetThemes()) do
-                table.insert(names, name)
-            end
-            table.sort(names)
-            return names
-        end)(),
+        Flag = "UITheme", Title = "Tema do Hub", Desc = "Altera as cores da interface instantaneamente.",
+        Values = (function() local names = {}; for name in pairs(WindUI:GetThemes()) do table.insert(names, name) end table.sort(names); return names end)(),
         Value = WindUI:GetCurrentTheme(),
-        Callback = function(v)
-            WindUI:SetTheme(v)
-            Config.UITheme = v
-        end
+        Callback = function(v) WindUI:SetTheme(v); Config.UITheme = v end
     })
 
-    WindowTab:Section({
-        Title = "Gerenciamento",
-        Desc = "Controle o salvamento e restauração das configurações.",
-        Icon = "folder-cog"
-    })
+    WindowTab:Section({ Title = "Ferramentas do Servidor", Desc = "Ações para reconectar e estabilizar.", Icon = "server" })
+    
+    WindowTab:Button({ Title = "FPS BOOST (Anti-Lag)", Desc = "Remove texturas do mapa para melhorar FPS.", Icon = "zap", Callback = function() Utils:AntiLag() end })
+    WindowTab:Button({ Title = "REJOIN", Desc = "Entra novamente neste mesmo servidor.", Icon = "rotate-cw", Callback = function() Utils:Rejoin() end })
+    WindowTab:Button({ Title = "SERVER HOP", Desc = "Busca e entra em um servidor mais vazio.", Icon = "globe", Callback = function() Utils:ServerHop() end })
+    WindowTab:Toggle({ Flag = "AutoRejoinE", Title = "Auto-Rejoin (Crash/Kick)", Desc = "Volta ao jogo se for desconectado.", Value = Config.AutoRejoin or false, Callback = function(v) Config.AutoRejoin = v end })
 
-    WindowTab:Button({
-        Title = "SALVAR CONFIGURAÇÕES",
-        Desc = "Força o salvamento imediato das configurações atuais.",
-        Icon = "save",
-        IconAlign = "Left",
-        Callback = function()
-            StateMod:SaveConfig(Config)
-            WindUI:Notify({
-                Title = "Salvo",
-                Content = "JSON atualizado!",
-                Icon = "check",
-                Duration = 3
-            })
-        end
-    })
-
-    WindowTab:Button({
-        Title = "RESTAURAR PADRÕES",
-        Desc = "Apaga as configurações salvas e volta ao formato original.",
-        Icon = "rotate-ccw",
-        IconAlign = "Left",
-        Callback = function()
-            StateMod:ResetConfig(Config)
-            StateMod:SaveConfig(Config)
-            WindUI:Notify({
-                Title = "Configurações restauradas",
-                Content = "Reabra o hub pra ver os controles atualizados.",
-                Icon = "refresh-cw",
-                Duration = 5
-            })
-        end
-    })
-
-    WindowTab:Toggle({
-        Flag = "AutoRejoinE",
-        Title = "Auto-Rejoin (ao cair do servidor)",
-        Desc = "Tenta voltar para a partida automaticamente caso o Roblox feche por erro de conexão ou kick.",
-        Value = Config.AutoRejoin or false,
-        Callback = function(v)
-            Config.AutoRejoin = v
-        end
-    })
-
-    WindowTab:Section({
-        Title = "Utilitários",
-        Desc = "Ferramentas gerais para o jogo.",
-        Icon = "wrench"
-    })
-
-    WindowTab:Button({
-        Title = "FPS BOOST",
-        Desc = "Remove texturas e efeitos pesados do mapa para aumentar o desempenho.",
-        Icon = "zap",
-        IconAlign = "Left",
-        Callback = function()
-            Utils:AntiLag()
-        end
-    })
-
-    WindowTab:Button({
-        Title = "REJOIN",
-        Desc = "Sai e entra novamente no mesmo servidor.",
-        Icon = "refresh-cw",
-        IconAlign = "Left",
-        Callback = function()
-            Utils:Rejoin()
-        end
-    })
-
-    WindowTab:Button({
-        Title = "SERVER HOP",
-        Desc = "Troca de servidor (procura um com poucos jogadores).",
-        Icon = "globe",
-        IconAlign = "Left",
-        Callback = function()
-            Utils:ServerHop()
-        end
-    })
-
-    -- =========================================================
-    -- DISCORD
-    -- =========================================================
-
-    WindowTab:Section({
-        Title = "Discord",
-        Desc = "Junte-se à nossa comunidade.",
-        Icon = "messages-square"
-    })
+    WindowTab:Section({ Title = "Comunidade", Desc = "Fique por dentro das atualizações.", Icon = "users" })
 
     WindowTab:Paragraph({
         Title = "Servidor do Discord",
-        Desc = 'Entre na comunidade 1NXITER. Toque em "Copiar link" para copiar o convite.',
-        Image = "https://cdn.simpleicons.org/discord",
-        ImageSize = 28,
-        Color = "White",
+        Desc = 'Comunidade 1NXITER Oficial.',
+        Image = "https://cdn.simpleicons.org/discord", ImageSize = 28, Color = "White",
         Buttons = {
-            {
-                Title = "Copiar link",
-                Icon = "copy",
-                Variant = "Tertiary",
-                Callback = function()
-                    local DiscordLink = Config.DiscordLink
-
-                    if IsPlaceholderLink(DiscordLink) then
-                        WindUI:Notify({
-                            Title = "Discord",
-                            Content = "Configure Config.DiscordLink com o convite do servidor.",
-                            Icon = "triangle-alert",
-                            Duration = 4
-                        })
-                        return
-                    end
-
-                    if CopyToClipboard(DiscordLink) then
-                        WindUI:Notify({
-                            Title = "Discord",
-                            Content = "Link copiado!",
-                            Icon = "check",
-                            Duration = 3
-                        })
-                    else
-                        WindUI:Notify({
-                            Title = "Discord",
-                            Content = DiscordLink,
-                            Icon = "copy",
-                            Duration = 5
-                        })
-                    end
-                end
-            }
+            { Title = "Copiar link", Icon = "copy", Variant = "Tertiary", Callback = function()
+                local link = Config.DiscordLink
+                if IsPlaceholderLink(link) then WindUI:Notify({Title="Aviso", Content="Configure Config.DiscordLink.", Duration=4}); return end
+                if CopyToClipboard(link) then WindUI:Notify({Title="Sucesso", Content="Link copiado!", Duration=3})
+                else WindUI:Notify({Title="Discord", Content=link, Duration=5}) end
+            end}
         }
     })
 
-    WindowTab:Section({
-        Title = "Sistema",
-        Desc = "Encerramento do painel.",
-        Icon = "power"
-    })
+    WindowTab:Section({ Title = "Gerenciamento de Dados", Desc = "Salvar e restaurar dados locais.", Icon = "database" })
 
-    WindowTab:Button({
-        Title = "FECHAR HUB",
-        Desc = "Desativa tudo e remove a interface da tela.",
-        Icon = "power",
-        IconAlign = "Left",
-        Callback = function()
-            Hub:Unload()
-            getgenv().InxiterHubLoaded = false
-            getgenv().InxiterHubInstance = nil
-        end
-    })
+    WindowTab:Button({ Title = "SALVAR CONFIGURAÇÕES", Desc = "O hub já salva automaticamente a cada 8s, mas você pode forçar.", Icon = "save", Callback = function()
+        StateMod:SaveConfig(Config); WindUI:Notify({Title="Salvo", Content="JSON atualizado!", Duration=3})
+    end })
+
+    WindowTab:Button({ Title = "RESTAURAR PADRÕES DE FÁBRICA", Desc = "Reseta todas as abas. Requer reabrir o hub.", Icon = "rotate-ccw", Callback = function()
+        StateMod:ResetConfig(Config); StateMod:SaveConfig(Config); WindUI:Notify({Title="Resetado", Content="Reabra o hub para ver os botões resetados.", Duration=5})
+    end })
+
+    WindowTab:Section({ Title = "Perigo", Desc = "Encerramento total do script.", Icon = "alert-triangle" })
+
+    WindowTab:Button({ Title = "FECHAR HUB TOTALMENTE", Desc = "Remove do jogo e para todos os loops de fundo.", Icon = "power", Callback = function()
+        Hub:Unload()
+        getgenv().InxiterHubLoaded = false
+        getgenv().InxiterHubInstance = nil
+    end })
 end
 
 return Tab

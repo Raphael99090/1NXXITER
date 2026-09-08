@@ -158,7 +158,10 @@ local function RequestKey(onSuccess)
     local hwid = GetHWID()
     
     local success, WindUI = pcall(function()
-        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+        if getgenv().WindUI then return getgenv().WindUI end
+        local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+        getgenv().WindUI = lib
+        return lib
     end)
 
     if not success or not WindUI then
@@ -323,7 +326,7 @@ end
 
 -- ETAPA 3: Carregar Tabs (O conteúdo de cada aba da UI)
 local tabsList = {
-    "TrainTab", "CombatTab", "ESPTab", "MovementTab", "CameraTab", "SystemTab"
+    "OverviewTab", "CombatTab", "ESPTab", "MovementTab", "CameraTab", "TrainTab", "ShortcutsTab", "SystemTab"
 }
 for _, t in pairs(tabsList) do
     Hub.UI.Tabs[t] = Import("Interface/Tabs/" .. t)

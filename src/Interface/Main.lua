@@ -20,7 +20,10 @@ end
 function InterfaceMain:Load(Hub, Config, State)
     -- [1] CARREGAMENTO SEGURO DA WINDUI
     local success, WindUI = pcall(function()
-        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+        if getgenv().WindUI then return getgenv().WindUI end
+        local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+        getgenv().WindUI = lib
+        return lib
     end)
 
     if not success or not WindUI then
@@ -49,7 +52,7 @@ function InterfaceMain:Load(Hub, Config, State)
         Icon = customIcon or "house",
         Folder = "InxiterHub",
         Size = UDim2.fromOffset(580, 460),
-        ToggleKey = Enum.KeyCode.LeftControl,
+        ToggleKey = Enum.KeyCode[Config.UIToggleKey or "LeftControl"] or Enum.KeyCode.LeftControl,
 
         OpenButton = {
             Title = "1NX",
@@ -75,11 +78,17 @@ function InterfaceMain:Load(Hub, Config, State)
     local LocalPlayer = Players.LocalPlayer
     local UserInputService = game:GetService("UserInputService")
     local function KeepTouchControlsEnabled()
-        pcall(function()
-            local PlayerModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
-            PlayerModule:GetControls():Enable()
-        end)
-        pcall(function() UserInputService.ModalEnabled = false end)
+        getgenv().InxiterKeepTouchControls = function()
+            local Players = game:GetService("Players")
+            local LocalPlayer = Players.LocalPlayer
+            local UserInputService = game:GetService("UserInputService")
+            pcall(function()
+                local PlayerModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
+                PlayerModule:GetControls():Enable()
+            end)
+            pcall(function() UserInputService.ModalEnabled = false end)
+        end
+        getgenv().InxiterKeepTouchControls()
     end
     KeepTouchControlsEnabled()
     Window:OnOpen(KeepTouchControlsEnabled)
@@ -87,11 +96,13 @@ function InterfaceMain:Load(Hub, Config, State)
 
     -- [3] ESTRUTURA DE ABAS
     local Tabs = {
-        Train = Window:Tab({ Title = "Treino", Icon = "activity" }),
+        Overview = Window:Tab({ Title = "Visão Geral", Icon = "layout-dashboard" }),
         Combat = Window:Tab({ Title = "Combate", Icon = "swords" }),
         ESP = Window:Tab({ Title = "Visual", Icon = "eye" }),
         Movement = Window:Tab({ Title = "Movimento", Icon = "move" }),
+        Train = Window:Tab({ Title = "Treino", Icon = "dumbbell" }),
         Camera = Window:Tab({ Title = "Câmera", Icon = "camera" }),
+        Shortcuts = Window:Tab({ Title = "Atalhos", Icon = "keyboard" }),
         System = Window:Tab({ Title = "Sistema", Icon = "settings" })
     }
 
@@ -113,15 +124,17 @@ function InterfaceMain:Load(Hub, Config, State)
     Hub.UI.Library = WindUI
     Hub.UI.Window = Window
 
-    SafeRender("TrainTab", Tabs.Train)
+    SafeRender("OverviewTab", Tabs.Overview)
     SafeRender("CombatTab", Tabs.Combat)
     SafeRender("ESPTab", Tabs.ESP)
     SafeRender("MovementTab", Tabs.Movement)
+    SafeRender("TrainTab", Tabs.Train)
     SafeRender("CameraTab", Tabs.Camera)
+    SafeRender("ShortcutsTab", Tabs.Shortcuts)
     SafeRender("SystemTab", Tabs.System)
 
     -- [5] FINALIZAÇÃO
-    Tabs.Train:Select()
+    Tabs.Overview:Select()
 
     WindUI:Notify({
         Title = "1NXITER HUB",

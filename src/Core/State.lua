@@ -16,6 +16,10 @@ local DefaultConfig = {
     AutoCrouch = false,
     AutoEquip = false,
     
+    -- Atalhos
+    AimKey = "E",
+    UIToggleKey = "LeftControl",
+    
     -- Sistema
     AutoRejoin = false,
     UITheme = "Dark",

@@ -16,11 +16,10 @@ local originalHitboxes = {}
 -- o joystick de andar "desaparece" no celular. Forçar Enable() aqui
 -- mantém ele visível mesmo com a câmera em modo Scriptable.
 local function KeepTouchControlsEnabled()
-    local ok = pcall(function()
-        local PlayerModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
-        PlayerModule:GetControls():Enable()
-    end)
-    return ok
+    if getgenv().InxiterKeepTouchControls then
+        getgenv().InxiterKeepTouchControls()
+    end
+    return true
 end
 
 Aimbot.Settings = {
@@ -139,8 +138,20 @@ Aimbot.IsAiming = false -- exposto pra UI poder mostrar status ao vivo (CombatTa
 Aimbot.LockedTarget = nil -- exposto pra UI/outras features saberem quem tá marcado
 
 Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
-    -- Sempre pega a câmera atual (não cacheada) — se o jogo trocar a
-    -- CurrentCamera em algum momento, a feature não fica "morta" em silêncio.
+    if not Aimbot.Settings.Enabled and not Aimbot.Settings.ShowFOV and not Aimbot.Settings.HitboxExpander and not next(originalHitboxes) then
+        if FOVCircle then FOVCircle.Visible = false end
+        if LockMarker then LockMarker.Visible = false end
+        if wasAiming then
+            local Camera = Workspace.CurrentCamera
+            if Camera then Camera.CameraType = Enum.CameraType.Custom end
+            wasAiming = false
+            Aimbot.IsAiming = false
+            Aimbot.LockedTarget = nil
+            if getgenv().InxiterKeepTouchControls then getgenv().InxiterKeepTouchControls() end
+        end
+        return
+    end
+
     local Camera = Workspace.CurrentCamera
     if not Camera then return end
 

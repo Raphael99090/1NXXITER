@@ -15,10 +15,9 @@ local MAX_PITCH = math.rad(89) -- sem isso a câmera passa da vertical e "vira d
 -- Mesmo problema do Aimbot: CameraType Scriptable faz o Roblox desligar
 -- o joystick de andar sozinho. Forçamos ele de volta.
 local function KeepTouchControlsEnabled()
-    pcall(function()
-        local PlayerModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
-        PlayerModule:GetControls():Enable()
-    end)
+    if getgenv().InxiterKeepTouchControls then
+        getgenv().InxiterKeepTouchControls()
+    end
 end
 
 -- GetMouseDelta só existe com mouse. Em touch (celular), a rotação da
