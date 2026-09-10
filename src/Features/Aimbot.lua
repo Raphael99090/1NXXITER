@@ -1,0 +1,334 @@
+local Aimbot = {}
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Guarda o Size original do HumanoidRootPart de cada jogador antes de
+-- expandir — sem isso, desligar o Hitbox Expander não devolvia o tamanho
+-- original e os personagens ficavam com colliders gigantes pra sempre.
+local originalHitboxes = {}
+
+-- Quando a câmera vira Scriptable (usado pra mirar), o script padrão de
+-- controles touch do Roblox se desliga por conta própria — é assim que
+-- o joystick de andar "desaparece" no celular. Forçar Enable() aqui
+-- mantém ele visível mesmo com a câmera em modo Scriptable.
+local function KeepTouchControlsEnabled()
+    if getgenv().InxiterKeepTouchControls then
+        getgenv().InxiterKeepTouchControls()
+    end
+    return true
+end
+
+Aimbot.Settings = {
+    Enabled = false,
+    TeamCheck = false,
+    WallCheck = true,
+    ShowFOV = false,
+    FOVRadius = 150,
+    Smoothness = 0.5,
+    TargetPart = "HumanoidRootPart",
+    HitboxExpander = false,
+    HitboxSize = 10,
+    SilentAim = false, -- trava o alvo sem girar a câmera (ver nota abaixo)
+    Priority = "Closest", -- "Closest" (mais perto da mira) ou "LowHealth" (menor vida)
+    AimKeyOnly = false, -- só mira enquanto segura AimKey, em vez de sempre que tiver alvo
+    AimKey = Enum.KeyCode.E,
+    IgnoredTeams = {}, -- Tabela de times ignorados (Multi-Dropdown)
+    TargetPlayers = {} -- Tabela de players focados (Multi-Dropdown)
+}
+
+-- Marcador do alvo travado, só aparece no modo Silent Aim (pra ainda dar
+-- um retorno visual de quem tá marcado, já que a câmera não se mexe).
+local LockMarker = nil
+do
+    local ok, circle = pcall(function()
+        local c = Drawing.new("Circle")
+        c.Color = Color3.fromRGB(255, 60, 60)
+        c.Thickness = 2
+        c.Radius = 10
+        c.Filled = false
+        c.NumSides = 3
+        c.Visible = false
+        return c
+    end)
+    if ok then LockMarker = circle end
+end
+
+local FOVCircle = nil
+do
+    local ok, circle = pcall(function()
+        local c = Drawing.new("Circle")
+        c.Color = Color3.new(1, 1, 1)
+        c.Thickness = 1
+        c.Filled = false
+        return c
+    end)
+    if ok then FOVCircle = circle end
+end
+
+local function IsVisible(part, camera, targetCharacter)
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {LocalPlayer.Character, camera}
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    local result = Workspace:Raycast(camera.CFrame.Position, part.Position - camera.CFrame.Position, params)
+    return result == nil or (result.Instance and result.Instance:IsDescendantOf(targetCharacter))
+end
+
+local function GetTarget(camera)
+    local target = nil
+    local bestScore = nil
+    local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(Aimbot.Settings.TargetPart) then
+            if Aimbot.Settings.TeamCheck and p.Team == LocalPlayer.Team then continue end
+            local isIgnored = false
+            if p.Team then
+                for k, v in pairs(Aimbot.Settings.IgnoredTeams) do
+                    if (type(k) == "number" and v == p.Team.Name) or (type(k) == "string" and k == p.Team.Name and v == true) then
+                        isIgnored = true break
+                    end
+                end
+            end
+            if isIgnored then continue end
+            
+            local hasTargets = false
+            local isTarget = false
+            for k, v in pairs(Aimbot.Settings.TargetPlayers) do
+                hasTargets = true
+                if (type(k) == "number" and v == p.Name) or (type(k) == "string" and k == p.Name and v == true) then
+                    isTarget = true
+                end
+            end
+            if hasTargets and not isTarget then continue end
+            
+            local part = p.Character[Aimbot.Settings.TargetPart]
+            local pos, onScreen = camera:WorldToViewportPoint(part.Position)
+            
+            if onScreen then
+                local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                if dist < Aimbot.Settings.FOVRadius then
+                    if Aimbot.Settings.WallCheck and not IsVisible(part, camera, p.Character) then continue end
+
+                    -- "Closest" pontua por distância até a mira (menor = melhor,
+                    -- igual sempre foi). "LowHealth" pontua pela vida atual —
+                    -- ainda só considera quem tá dentro do FOV e visível.
+                    local score = dist
+                    if Aimbot.Settings.Priority == "LowHealth" then
+                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                        score = hum and hum.Health or math.huge
+                    end
+
+                    if not bestScore or score < bestScore then
+                        bestScore = score
+                        target = part
+                    end
+                end
+            end
+        end
+    end
+    return target
+end
+
+local wasAiming = false
+Aimbot.IsAiming = false -- exposto pra UI poder mostrar status ao vivo (CombatTab)
+Aimbot.LockedTarget = nil -- exposto pra UI/outras features saberem quem tá marcado
+
+Aimbot._conn = RunService.RenderStepped:Connect(function(dt)
+    if not Aimbot.Settings.Enabled and not Aimbot.Settings.ShowFOV and not Aimbot.Settings.HitboxExpander and not next(originalHitboxes) then
+        if FOVCircle then FOVCircle.Visible = false end
+        if LockMarker then LockMarker.Visible = false end
+        if wasAiming then
+            local Camera = Workspace.CurrentCamera
+            if Camera then Camera.CameraType = Enum.CameraType.Custom end
+            wasAiming = false
+            Aimbot.IsAiming = false
+            Aimbot.LockedTarget = nil
+            if getgenv().InxiterKeepTouchControls then getgenv().InxiterKeepTouchControls() end
+        end
+        return
+    end
+
+    local Camera = Workspace.CurrentCamera
+    if not Camera then return end
+
+    -- FOV Visual
+    if FOVCircle then
+        FOVCircle.Visible = Aimbot.Settings.ShowFOV
+        FOVCircle.Radius = Aimbot.Settings.FOVRadius
+        FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    end
+
+    -- Hitbox Expander Logic (com salvamento/restauração de tamanho original)
+    if Aimbot.Settings.HitboxExpander then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local root = p.Character.HumanoidRootPart
+                if not originalHitboxes[p] then
+                    originalHitboxes[p] = root.Size
+                end
+                root.Size = Vector3.new(Aimbot.Settings.HitboxSize, Aimbot.Settings.HitboxSize, Aimbot.Settings.HitboxSize)
+                root.Transparency = 0.7
+                root.CanCollide = false
+            end
+        end
+        -- Cleanup players that left or respawned
+        for p, origSize in pairs(originalHitboxes) do
+            if not p.Parent or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
+                originalHitboxes[p] = nil
+            elseif p.Character.HumanoidRootPart.Size == origSize then
+                -- if somehow it was reset, we clear it so we can capture it again if needed
+                -- this prevents the table holding onto old references forever
+                originalHitboxes[p] = nil
+            end
+        end
+    elseif next(originalHitboxes) then
+        -- Restaura hitboxes originais quando desligado
+        for p, origSize in pairs(originalHitboxes) do
+            pcall(function()
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local root = p.Character.HumanoidRootPart
+                    root.Size = origSize
+                    root.Transparency = 0
+                    root.CanCollide = true
+                end
+            end)
+        end
+        originalHitboxes = {}
+    end
+
+    -- Aimbot Logic
+    if Aimbot.Settings.Enabled then
+        if Aimbot.Settings.AimKeyOnly and UserInputService.TouchEnabled then
+            if not Aimbot.MobileUI then
+                Aimbot.MobileUI = Instance.new("ScreenGui", game:GetService("CoreGui"))
+                Aimbot.MobileUI.Name = "InxiterAimButton"
+                
+                local btn = Instance.new("TextButton", Aimbot.MobileUI)
+                btn.Size = UDim2.new(0, 80, 0, 80)
+                btn.Position = UDim2.new(1, -120, 0.5, 0)
+                btn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+                btn.BackgroundTransparency = 0.5
+                btn.Text = "AIM"
+                btn.TextColor3 = Color3.new(1,1,1)
+                btn.Font = Enum.Font.GothamBold
+                btn.TextSize = 20
+                
+                local corner = Instance.new("UICorner", btn)
+                corner.CornerRadius = UDim.new(1, 0)
+                
+                btn.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        Aimbot.MobileAimButtonDown = true
+                        btn.BackgroundColor3 = Color3.fromRGB(60, 255, 60)
+                    end
+                end)
+                btn.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        Aimbot.MobileAimButtonDown = false
+                        btn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+                    end
+                end)
+            end
+        else
+            if Aimbot.MobileUI then
+                Aimbot.MobileUI:Destroy()
+                Aimbot.MobileUI = nil
+                Aimbot.MobileAimButtonDown = false
+            end
+        end
+
+        local keyOk = not Aimbot.Settings.AimKeyOnly
+        if Aimbot.Settings.AimKeyOnly then
+            if UserInputService:IsKeyDown(Aimbot.Settings.AimKey) then
+                keyOk = true
+            elseif Aimbot.MobileAimButtonDown then
+                keyOk = true
+            end
+        end
+        
+        local target = keyOk and GetTarget(Camera) or nil
+        Aimbot.LockedTarget = target
+
+        if target and Aimbot.Settings.SilentAim then
+            if Camera.CameraType ~= Enum.CameraType.Custom then
+                Camera.CameraType = Enum.CameraType.Custom
+            end
+            wasAiming = false
+            Aimbot.IsAiming = true
+
+            if LockMarker then
+                local pos, onScreen = Camera:WorldToViewportPoint(target.Position)
+                LockMarker.Visible = onScreen
+                LockMarker.Position = Vector2.new(pos.X, pos.Y)
+            end
+        elseif target then
+            if LockMarker then LockMarker.Visible = false end
+            if Camera.CameraType ~= Enum.CameraType.Scriptable then
+                Camera.CameraType = Enum.CameraType.Scriptable
+                KeepTouchControlsEnabled()
+            end
+            wasAiming = true
+            Aimbot.IsAiming = true
+
+            local targetPos = CFrame.new(Camera.CFrame.Position, target.Position)
+            Camera.CFrame = Camera.CFrame:Lerp(targetPos, Aimbot.Settings.Smoothness * (dt * 60))
+        else
+            if LockMarker then LockMarker.Visible = false end
+            if wasAiming then
+                Camera.CameraType = Enum.CameraType.Custom
+                wasAiming = false
+            end
+            Aimbot.IsAiming = false
+        end
+    else
+        if Aimbot.MobileUI then
+            Aimbot.MobileUI:Destroy()
+            Aimbot.MobileUI = nil
+            Aimbot.MobileAimButtonDown = false
+        end
+        if LockMarker then LockMarker.Visible = false end
+        Aimbot.LockedTarget = nil
+        if wasAiming then
+            Camera.CameraType = Enum.CameraType.Custom
+            wasAiming = false
+        end
+        Aimbot.IsAiming = false
+    end
+end)
+
+function Aimbot:Unload()
+    self.Settings.Enabled = false
+    self.Settings.HitboxExpander = false
+    self.IsAiming = false
+    self.LockedTarget = nil
+
+    -- Restaura hitboxes antes de desconectar
+    for p, origSize in pairs(originalHitboxes) do
+        pcall(function()
+            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local root = p.Character.HumanoidRootPart
+                root.Size = origSize
+                root.Transparency = 0
+                root.CanCollide = true
+            end
+        end)
+    end
+    originalHitboxes = {}
+
+    if self._conn then self._conn:Disconnect() self._conn = nil end
+    local Camera = Workspace.CurrentCamera
+    if Camera then Camera.CameraType = Enum.CameraType.Custom end
+    if FOVCircle then FOVCircle:Remove() end
+    if LockMarker then LockMarker:Remove() end
+    if Aimbot.MobileUI then
+        Aimbot.MobileUI:Destroy()
+        Aimbot.MobileUI = nil
+        Aimbot.MobileAimButtonDown = false
+    end
+end
+
+return Aimbot
