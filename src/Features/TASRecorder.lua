@@ -36,6 +36,7 @@ local RouteFolder = nil
 -- Reprodução em andamento (agora é o PRÓPRIO jogador que anda o caminho)
 local Playing = false
 local PlayToken = 0
+local PlayHeartbeatConn = nil
 local LockedControls = nil
 local PlayerProgressBillboard = nil
 
@@ -504,10 +505,10 @@ function TASRecorder:StopPlayback()
     PlayToken = PlayToken + 1
     Playing = false
 
-    local hum, root = GetHumanoid(), GetRoot()
-    if hum and root then
-        pcall(function() hum:MoveTo(root.Position) end) -- cancela o MoveTo em andamento
-    end
+    if PlayHeartbeatConn then PlayHeartbeatConn:Disconnect(); PlayHeartbeatConn = nil end
+
+    local root = GetRoot()
+    if root then root.Anchored = false end -- devolve a física pro jogador
 
     ReleaseControl()
 end
@@ -525,6 +526,7 @@ function TASRecorder:PlayRecording(data)
     local waypoints = data.waypoints
     if not data.cumDist then data.cumDist = BuildCumulativeDistance(waypoints) end
     local totalDist = data.cumDist[#data.cumDist] or 0
+    local totalTime = waypoints[#waypoints].t
 
     Playing = true
     PlayToken = PlayToken + 1
@@ -532,8 +534,7 @@ function TASRecorder:PlayRecording(data)
 
     SuspendCompetingCamera() -- desliga Aimbot/FreeCam se estiverem disputando a câmera
 
-    -- Trava WASD enquanto o script guia o personagem pelos waypoints —
-    -- sem isso o input do jogador brigaria com o Humanoid:MoveTo. A
+    -- Trava WASD enquanto o replay controla o personagem direto. A
     -- câmera continua 100% normal (segue o próprio jogador como sempre).
     pcall(function()
         local PlayerModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
@@ -541,92 +542,74 @@ function TASRecorder:PlayRecording(data)
         LockedControls:Disable()
     end)
 
-    -- Assume a posição gravada do início (a mesma do fantasma) antes de
-    -- começar a andar o trajeto de verdade.
-    pcall(function() root.CFrame = ComponentsToCFrame(waypoints[1].cf) end)
+    -- Trava a física (Anchored) e reproduz o CFrame gravado direto, frame
+    -- a frame, interpolado — NÃO usa Humanoid:MoveTo/física pra andar.
+    -- Motivo: MoveTo só entende alvo no chão; num pulo o alvo fica no ar
+    -- e a gravidade sempre vence antes de chegar lá, então o pulo nunca
+    -- acontecia de verdade. Com CFrame direto, a trajetória gravada
+    -- (altura do pulo incluída) é reproduzida exatamente como gravou,
+    -- sempre — não depende de acertar o timing com o motor de física.
+    root.Anchored = true
+    root.CFrame = ComponentsToCFrame(waypoints[1].cf)
 
     local progressLabel = CreateLabel(root)
     PlayerProgressBillboard = progressLabel.Parent
 
-    task.spawn(function()
-        local i = 1
-        while i <= #waypoints do
-            if PlayToken ~= myToken then return end -- outra sessão assumiu (Stop/novo Play)
+    local startClock = os.clock()
+    local segIndex = 1 -- só avança pra frente, nunca reseta nem dá wrap-around
+    local lastAppliedState = nil
 
-            local h, r = GetHumanoid(), GetRoot()
-            if not h or not r then break end
+    PlayHeartbeatConn = RunService.Heartbeat:Connect(function()
+        if PlayToken ~= myToken then return end -- sessão velha, será desconectada
 
-            local wp = waypoints[i]
-
-            if wp.st and JUMP_STATES[wp.st] then
-                -- Início de um pulo: MoveTo ponto a ponto NÃO funciona no
-                -- ar (o alvo fica acima do chão, a gravidade puxa pra
-                -- baixo e o personagem nunca chega — é exatamente esse o
-                -- bug do "não faz o pulo"). Em vez disso: dispara o pulo
-                -- uma vez só e mira o MoveTo direto no ponto de POUSO
-                -- (o primeiro waypoint depois que volta a andar/cair) —
-                -- a física cuida da altura, o MoveTo só carrega o
-                -- impulso horizontal até o lugar certo.
-                local landIndex = i
-                while landIndex < #waypoints
-                    and (waypoints[landIndex].st == "Jumping" or waypoints[landIndex].st == "Freefall") do
-                    landIndex = landIndex + 1
-                end
-
-                local landTarget = ComponentsToPosition(waypoints[landIndex].cf)
-                h.Jump = true
-                h:MoveTo(landTarget)
-
-                if progressLabel and progressLabel.Parent then
-                    progressLabel.Text = string.format("%.1fs | %.1f studs", wp.t, data.cumDist[i] or 0)
-                end
-
-                local waited = 0
-                while waited < 3 and PlayToken == myToken do
-                    task.wait(0.05)
-                    waited = waited + 0.05
-                    local hh = GetHumanoid()
-                    if not hh then break end
-                    local state = hh:GetState()
-                    if state ~= Enum.HumanoidStateType.Jumping and state ~= Enum.HumanoidStateType.Freefall then
-                        break -- já pousou (ou a física decidiu diferente) — segue o replay
-                    end
-                end
-
-                i = landIndex + 1
-            else
-                local target = ComponentsToPosition(wp.cf)
-                h:MoveTo(target)
-
-                if progressLabel and progressLabel.Parent then
-                    progressLabel.Text = string.format("%.1fs | %.1f studs", wp.t, data.cumDist[i] or 0)
-                end
-
-                local reached = false
-                local moveConn = h.MoveToFinished:Connect(function() reached = true end)
-                local waited = 0
-                while not reached and waited < 2 and PlayToken == myToken do
-                    task.wait(0.05)
-                    waited = waited + 0.05
-                    local rr = GetRoot()
-                    if rr and (rr.Position - target).Magnitude < 2 then break end
-                end
-                moveConn:Disconnect()
-
-                i = i + 1
-            end
+        local h, r = GetHumanoid(), GetRoot()
+        if not h or not r then
+            self:StopPlayback()
+            return
         end
 
-        -- Chegou no último waypoint (ou saiu do loop porque o personagem
-        -- sumiu) — PARA de vez. Sem reiniciar, sem voltar ao primeiro
-        -- ponto. Só limpa se ninguém mais assumiu a sessão nesse meio
-        -- tempo (StopPlayback já teria trocado o token).
-        if PlayToken == myToken then
+        local elapsed = os.clock() - startClock
+
+        if elapsed >= totalTime then
+            -- Último frame: aplica exatamente ele e PARA. Sem reiniciar,
+            -- sem voltar pro primeiro ponto, sem "% totalTime".
+            r.CFrame = ComponentsToCFrame(waypoints[#waypoints].cf)
             if progressLabel and progressLabel.Parent then
-                progressLabel.Text = string.format("%.1fs | %.1f studs (fim)", waypoints[#waypoints].t, totalDist)
+                progressLabel.Text = string.format("%.1fs | %.1f studs (fim)", totalTime, totalDist)
             end
+            if PlayHeartbeatConn then PlayHeartbeatConn:Disconnect(); PlayHeartbeatConn = nil end
             Playing = false
+            r.Anchored = false
             ReleaseControl()
+            return
+        end
+
+        while segIndex < #waypoints - 1 and waypoints[segIndex + 1].t <= elapsed do
+            segIndex = segIndex + 1
+        end
+
+        local a, b = waypoints[segIndex], waypoints[segIndex + 1]
+        local span = math.max(b.t - a.t, 1e-4)
+        local alpha = math.clamp((elapsed - a.t) / span, 0, 1)
+
+        r.CFrame = ComponentsToCFrame(a.cf):Lerp(ComponentsToCFrame(b.cf), alpha)
+
+        if progressLabel and progressLabel.Parent then
+            local segLen = (data.cumDist[segIndex + 1] or data.cumDist[segIndex]) - data.cumDist[segIndex]
+            progressLabel.Text = string.format("%.1fs | %.1f studs", elapsed, data.cumDist[segIndex] + segLen * alpha)
+        end
+
+        -- Cosmético: tenta acompanhar a animação de pulo/queda/corrida
+        -- com base no estado gravado — não afeta a posição (essa já é
+        -- 100% fiel pelo CFrame acima), só ajuda o visual a combinar.
+        if a.st and a.st ~= lastAppliedState then
+            lastAppliedState = a.st
+            pcall(function()
+                if JUMP_STATES[a.st] then h:ChangeState(Enum.HumanoidStateType.Jumping)
+                elseif a.st == "Freefall" then h:ChangeState(Enum.HumanoidStateType.Freefall)
+                elseif a.st == "Running" then h:ChangeState(Enum.HumanoidStateType.Running)
+                end
+            end)
         end
     end)
 

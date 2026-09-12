@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
+## [3.7.1] - 2026-09-09
+
+### Corrigido
+- **Pulo ainda não funcionava** mesmo depois do fix anterior (colapsar o trecho aéreo num MoveTo pro pouso) — o problema de raiz era depender de `Humanoid:MoveTo`/física de qualquer jeito: o `Humanoid.Jump` só pega se o personagem estiver exatamente no estado certo no frame certo, e isso não é garantido. **Trocado o modo de reprodução inteiro**: agora a raiz do personagem fica `Anchored` durante o replay e o `CFrame` gravado é reproduzido direto, frame a frame, interpolado (`CFrame:Lerp`) com base no tempo real decorrido — igual ao motor determinístico que já existia pro fantasma antes de virar estático. A trajetória (altura do pulo incluída) fica sempre idêntica ao que foi gravado, porque não depende de física nenhuma pra funcionar. Animação de pulo/queda/corrida é só cosmética agora (`Humanoid:ChangeState`, não afeta a posição).
+
 ## [3.7.0] - 2026-09-09
 
 ### Alterado (organização)
