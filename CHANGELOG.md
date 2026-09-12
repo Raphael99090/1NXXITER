@@ -2,6 +2,17 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
+## [3.7.0] - 2026-09-09
+
+### Alterado (organização)
+- **Spy Chat ganhou aba própria**, saiu de dentro da "Câmera" (não tinha nada a ver com câmera). Config migra sozinha na primeira carga (`Config.Camera.SpyChatEnabled` antigo → `Config.SpyChat.Enabled`, sem resetar quem já tinha ligado).
+- **`Interface/Main.lua` virou `Interface/Window.lua`** — o projeto tinha `src/main.lua` e `src/Interface/Main.lua` com o mesmo nome, ambíguo na hora de falar "mexe no main". `Hub.UI.Main` (o módulo carregado) virou `Hub.UI.Interface`, pra não colidir com `Hub.UI.Window` (a instância da janela que os `Dialog()` já usavam).
+
+## [3.6.2] - 2026-09-09
+
+### Adicionado
+- **Pose inicial fiel do fantasma (R6)**: aproveitada uma técnica de scripts TAS antigos encontrados pelo Rapzin (gravar o CFrame de cada parte do corpo, não só a raiz). No instante em que "Iniciar Gravação" é clicado, captura o CFrame de Head/Torso/Left Arm/Right Arm/Left Leg/Right Leg (`data.startPose`, uma vez só, não todo frame). Ao preparar o fantasma, planta essa pose exata nas partes correspondentes — em vez da pose genérica que o clone puxa do personagem no momento em que ele é preparado, agora ele fica congelado exatamente como você estava no instante em que começou a gravar (ex: no meio de um passo, braço balançando). Escopo deliberadamente só R6 e só a pose estática — o fantasma continua sem andar/animar o percurso.
+
 ## [3.6.1] - 2026-09-09
 
 ### Corrigido

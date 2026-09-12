@@ -175,6 +175,7 @@ function InterfaceMain:Load(Hub, Config, State)
         Movement = Window:Tab({ Title = "Movimento", Icon = "move" }),
         Train = Window:Tab({ Title = "Treino", Icon = "dumbbell" }),
         Camera = Window:Tab({ Title = "Câmera", Icon = "camera" }),
+        SpyChat = Window:Tab({ Title = "Spy Chat", Icon = "message-square-more" }),
         TAS = Window:Tab({ Title = "TAS", Icon = "film" }),
         Shortcuts = Window:Tab({ Title = "Atalhos", Icon = "keyboard" }),
         System = Window:Tab({ Title = "Sistema", Icon = "settings" })
@@ -204,6 +205,7 @@ function InterfaceMain:Load(Hub, Config, State)
     SafeRender("MovementTab", Tabs.Movement)
     SafeRender("TrainTab", Tabs.Train)
     SafeRender("CameraTab", Tabs.Camera)
+    SafeRender("SpyChatTab", Tabs.SpyChat)
     SafeRender("TASTab", Tabs.TAS)
     SafeRender("ShortcutsTab", Tabs.Shortcuts)
     SafeRender("SystemTab", Tabs.System)

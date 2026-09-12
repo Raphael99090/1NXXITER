@@ -33,7 +33,7 @@ local BASE_URL = "https://raw.githubusercontent.com/" .. REPO .. "/" .. BRANCH .
 -- A WindUI já suporta "pandadevelopment" como provedor nativo do
 -- KeySystem (viram até changelog corrigindo a URL da API do Panda lá).
 -- Isso passou a ser só configuração — ver Hub.KeyConfig abaixo, lido
--- pelo Interface/Main.lua na hora de montar a janela principal.
+-- pelo Interface/Window.lua na hora de montar a janela principal.
 --
 -- ⚠️ NÃO TESTADO AINDA NO EXECUTOR: a troca ficou bem menor e mais fácil
 -- de manter, mas o comportamento exato do KeySystem nativo (se ele
@@ -66,7 +66,7 @@ local Hub = {
     }
 }
 
--- Config do Key System nativo — lido pelo Interface/Main.lua na hora de
+-- Config do Key System nativo — lido pelo Interface/Window.lua na hora de
 -- montar o CreateWindow principal (ver comentário em [1.5] acima).
 Hub.KeyConfig = {
     ServiceId = PANDA_SERVICE_ID,
@@ -208,14 +208,14 @@ end
 
 -- ETAPA 3: Carregar Tabs (O conteúdo de cada aba da UI)
 local tabsList = {
-    "OverviewTab", "CombatTab", "ESPTab", "MovementTab", "CameraTab", "TrainTab", "ShortcutsTab", "SystemTab", "TASTab"
+    "OverviewTab", "CombatTab", "ESPTab", "MovementTab", "CameraTab", "SpyChatTab", "TrainTab", "ShortcutsTab", "SystemTab", "TASTab"
 }
 for _, t in pairs(tabsList) do
     Hub.UI.Tabs[t] = LoadModule("Tab", t, "Interface/Tabs/" .. t)
 end
 
 -- ETAPA 4: Carregar Interface Main (O montador da janela)
-Hub.UI.Main = LoadModule("Core", "InterfaceMain", "Interface/Main")
+Hub.UI.Interface = LoadModule("Core", "InterfaceWindow", "Interface/Window")
 
 -- ======================================================
 -- APLICAÇÃO DA CONFIGURAÇÃO SALVA
@@ -292,8 +292,16 @@ function Hub:ApplyConfig()
 
     local spy = self.Features.SpyChat
     if spy then
-        local cam = c.Camera or {}
-        spy:Toggle(cam.SpyChatEnabled == true)
+        local spyCfg = c.SpyChat
+        if not spyCfg and c.Camera and c.Camera.SpyChatEnabled ~= nil then
+            -- Migração: até a v3.6, o toggle do Spy Chat morava em
+            -- Config.Camera (a aba "Câmera" que ele nunca deveria ter
+            -- ficado). Preserva o valor salvo em vez de resetar pra
+            -- desligado só porque mudou de lugar.
+            c.SpyChat = { Enabled = c.Camera.SpyChatEnabled }
+            spyCfg = c.SpyChat
+        end
+        spy:Toggle((spyCfg and spyCfg.Enabled) == true)
     end
 end
 
@@ -302,7 +310,7 @@ end
 -- ======================================================
 local function Start()
     -- Verificação de Integridade: Se State ou Main falharem, o script para.
-    if not Hub.Core.State or not Hub.UI.Main then
+    if not Hub.Core.State or not Hub.UI.Interface then
         return warn("❌ [1NXITER]: Falha crítica. Verifique se as pastas e nomes no GitHub estão corretos.")
     end
 
@@ -335,7 +343,7 @@ local function Start()
     end
 
     -- Liga a Interface e desenha as abas
-    Hub.UI.Main:Load(Hub, Config, RuntimeState)
+    Hub.UI.Interface:Load(Hub, Config, RuntimeState)
 
     -- [ HUB DOCTOR ] Diagnóstico completo no console (F9), depois de tudo
     -- carregado e configurado — mostra o estado real de cada módulo.
@@ -354,7 +362,7 @@ end
 
 end
 
--- O KeySystem agora vive dentro da janela principal (Interface/Main.lua),
+-- O KeySystem agora vive dentro da janela principal (Interface/Window.lua),
 -- então o carregamento dos módulos já roda direto — a diferença prática
 -- é que os módulos são baixados do GitHub antes da key ser validada
 -- (antes só baixava depois). Pra um hub pessoal isso não pesa; se algum

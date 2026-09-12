@@ -3,7 +3,6 @@ local Tab = {}
 function Tab:Render(WindowTab, Hub, Config, State)
     local Vis = Hub.Features.Visuals
     local Cam = Hub.Features.FreeCam
-    local Spy = Hub.Features.SpyChat
     Config.Camera = Config.Camera or {}
     local Cfg = Config.Camera
 
@@ -15,9 +14,6 @@ function Tab:Render(WindowTab, Hub, Config, State)
     WindowTab:Toggle({ Flag = "FreeE", Title = "Ativar FreeCam", Desc = "Controle uma câmera livre invisível.", Icon = "video", Value = Cfg.FreeCamEnabled == true, Callback = function(v) Cfg.FreeCamEnabled = v; Cam:Toggle(v) end })
     WindowTab:Slider({ Flag = "FreeCamSpeed", Title = "Velocidade", Desc = "Rapidez de voo da câmera.", Step = 0.1, Value = { Min = 0.1, Max = 10, Default = Cfg.FreeCamSpeed or 1 }, Callback = function(v) Cfg.FreeCamSpeed = v; Cam.Settings.Speed = v end })
     WindowTab:Slider({ Flag = "FreeCamSens", Title = "Sensibilidade", Desc = "Sensibilidade ao girar a visão.", Step = 0.1, Value = { Min = 0.1, Max = 3, Default = Cfg.FreeCamSensitivity or 0.5 }, Callback = function(v) Cfg.FreeCamSensitivity = v; Cam.Settings.Sensitivity = v end })
-
-    WindowTab:Section({ Title = "Inteligência", Desc = "Painéis utilitários de informação.", Icon = "message-square" })
-    WindowTab:Toggle({ Flag = "SpyE", Title = "Ativar Spy Chat", Desc = "Lê chat privado e comandos do servidor em uma UI arrastável.", Icon = "message-square-more", Value = Cfg.SpyChatEnabled == true, Callback = function(v) Cfg.SpyChatEnabled = v; Spy:Toggle(v) end })
 end
 
 return Tab

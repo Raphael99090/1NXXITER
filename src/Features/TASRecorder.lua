@@ -14,10 +14,16 @@ local TRIGGER_RADIUS = 3.5 -- "dentro do fantasma" ~ tamanho de um personagem
 
 local JUMP_STATES = { Jumping = true }
 
+-- Nomes das partes do rig R6 — o projeto só precisa suportar R6, então
+-- nem tenta detectar/tratar R15. Usado só pra capturar a POSE inicial
+-- exata (braços/pernas/cabeça), não pra animar o fantasma inteiro.
+local R6_PARTS = { "Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg" }
+
 -- Gravação em andamento
 local Recording = false
 local RecordConn = nil
 local RecordBuffer = nil
+local RecordStartPose = nil
 
 -- Fantasma ativo (só um marcador parado — não anda, não é tocável)
 local GhostModel = nil
@@ -128,6 +134,20 @@ function TASRecorder:StartRecording()
     local root = GetRoot()
     if not root then return false, "Seu personagem não existe ainda." end
 
+    -- Pose exata (R6: Head/Torso/braços/pernas) no exato instante que a
+    -- gravação começa — só isso, uma vez, não every frame. Usada depois
+    -- só pra plantar o fantasma parado na pose certa (não pra animar).
+    RecordStartPose = {}
+    local char0 = GetCharacter()
+    if char0 then
+        for _, partName in ipairs(R6_PARTS) do
+            local part = char0:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                RecordStartPose[partName] = { part.CFrame:GetComponents() }
+            end
+        end
+    end
+
     RecordBuffer = {}
     local startTick = os.clock()
     local lastSample = -RECORD_INTERVAL
@@ -164,6 +184,7 @@ function TASRecorder:StopRecording()
     if RecordConn then RecordConn:Disconnect(); RecordConn = nil end
     Recording = false
     RecordBuffer = nil
+    RecordStartPose = nil
 end
 
 function TASRecorder:IsRecording()
@@ -195,10 +216,12 @@ function TASRecorder:SaveRecording(name)
     local root = GetRoot()
     local startCFrame = root and root.CFrame or CFrame.new()
     local buffer = RecordBuffer
+    local pose = RecordStartPose
     self:StopRecording()
 
     local data = {
         start = { c = { startCFrame:GetComponents() } },
+        startPose = pose,
         waypoints = buffer,
     }
 
@@ -396,6 +419,22 @@ function TASRecorder:PrepareGhost(name)
     if not ghost.PrimaryPart then ghost.PrimaryPart = ghostRoot end
     ghost.Parent = workspace
     if ghost.PrimaryPart then ghost:PivotTo(startCFrame) end
+
+    -- Planta a pose exata (R6: Head/Torso/braços/pernas) capturada no
+    -- instante em que a gravação começou, em vez da pose genérica que o
+    -- clone puxou do personagem AGORA. Como o fantasma já está na mesma
+    -- posição de mundo de onde a gravação começou, os CFrames absolutos
+    -- gravados continuam corretos sem precisar de nenhuma conta relativa.
+    -- Tudo já está Anchored, então cada parte aceita o CFrame direto sem
+    -- física brigando ou puxando as outras partes junto.
+    if data.startPose then
+        for partName, comps in pairs(data.startPose) do
+            local part = ghost:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                pcall(function() part.CFrame = ComponentsToCFrame(comps) end)
+            end
+        end
+    end
 
     if ghostRoot then
         local total = data.waypoints[#data.waypoints]
