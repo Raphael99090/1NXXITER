@@ -173,6 +173,14 @@ for _, f in pairs(featuresList) do
     Hub.Features[f] = LoadModule("Feature", f, "Features/" .. f)
 end
 
+-- TAS precisa suspender Aimbot/FreeCam durante o replay (os três disputam
+-- o controle da câmera) — é a única dependência real entre Features do
+-- projeto, e é opcional por natureza: sem essa chamada o TAS continua
+-- funcionando sozinho, só sem suspender ninguém.
+if Hub.Features.TASRecorder and Hub.Features.TASRecorder.SetHub then
+    Hub.Features.TASRecorder:SetHub(Hub)
+end
+
 -- Getters de "tá ativo agora?" pro Hub Doctor — só pra quem tem um
 -- conceito simples de ligado/desligado. Lidos ao vivo, nunca guardados.
 if Hub.Core.Lifecycle then

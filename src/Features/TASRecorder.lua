@@ -46,6 +46,15 @@ local LockedControls = nil
 local OriginalCameraType = nil
 local OriginalCameraSubject = nil
 
+-- Referência opcional pro Hub inteiro — só usada pra suspender outras
+-- Features que também disputam o controle da câmera (Aimbot Silent Aim,
+-- FreeCam) enquanto o replay roda. Setada de fora via SetHub(); sem ela,
+-- TAS continua funcionando normalmente sozinho (fica só sem suspender
+-- ninguém, o que já era o comportamento antigo).
+local HubRef = nil
+local SuspendedAimbot = nil
+local SuspendedFreeCam = nil
+
 local function HasFileSystem()
     return isfile and readfile and writefile and makefolder and isfolder and listfiles
 end
@@ -61,6 +70,51 @@ local function GetRoot()
 end
 local function GetCamera()
     return workspace.CurrentCamera
+end
+
+-- Chamado uma vez pelo main.lua depois que todas as Features carregam.
+function TASRecorder:SetHub(hub)
+    HubRef = hub
+end
+
+-- Aimbot (Silent Aim) e FreeCam também fazem CameraType=Scriptable e
+-- escrevem Camera.CFrame toda frame — sem suspender os dois durante o
+-- replay, eles brigam pelo controle da câmera com o TAS (tremedeira, e
+-- pior: podem sequestrar a câmera de volta bem depois do TAS já ter
+-- devolvido o controle). Guarda o estado anterior pra restaurar depois.
+local function SuspendCompetingCamera()
+    if not HubRef or not HubRef.Features then return end
+
+    local aim = HubRef.Features.Aimbot
+    if aim and aim.Settings and aim.Settings.Enabled then
+        SuspendedAimbot = true
+        aim.Settings.Enabled = false
+    end
+
+    local freecam = HubRef.Features.FreeCam
+    if freecam and freecam.Settings and freecam.Settings.Enabled and freecam.Toggle then
+        SuspendedFreeCam = true
+        pcall(function() freecam:Toggle(false) end)
+    end
+end
+
+local function RestoreCompetingCamera()
+    if not HubRef or not HubRef.Features then
+        SuspendedAimbot, SuspendedFreeCam = nil, nil
+        return
+    end
+
+    if SuspendedAimbot then
+        local aim = HubRef.Features.Aimbot
+        if aim and aim.Settings then aim.Settings.Enabled = true end
+        SuspendedAimbot = nil
+    end
+
+    if SuspendedFreeCam then
+        local freecam = HubRef.Features.FreeCam
+        if freecam and freecam.Toggle then pcall(function() freecam:Toggle(true) end) end
+        SuspendedFreeCam = nil
+    end
 end
 
 -- ======================================================
@@ -83,6 +137,7 @@ end)
 -- ======================================================
 function TASRecorder:StartRecording()
     if Recording then return false, "Já tem uma gravação em andamento." end
+    if Playing then return false, "Termina ou para a reprodução atual antes de gravar de novo." end
     local root = GetRoot()
     if not root then return false, "Seu personagem não existe ainda." end
 
@@ -516,6 +571,8 @@ local function ReleaseControl()
         pcall(function() LockedControls:Enable() end)
         LockedControls = nil
     end
+
+    RestoreCompetingCamera()
 end
 
 -- Cancela/encerra a reprodução atual (se tiver) e devolve câmera + controle
@@ -529,6 +586,7 @@ end
 
 function TASRecorder:PlayRecording(data)
     if Playing then return false, "Já tem uma reprodução em andamento." end
+    if Recording then return false, "Termina a gravação atual antes de reproduzir." end
     if not GhostModel or not data or type(data.waypoints) ~= "table" or #data.waypoints < 2 then
         return false, "Fantasma não está pronto."
     end
@@ -539,6 +597,8 @@ function TASRecorder:PlayRecording(data)
     Playing = true
     PlayToken = PlayToken + 1
     local myToken = PlayToken
+
+    SuspendCompetingCamera() -- desliga Aimbot/FreeCam se estiverem disputando a câmera
 
     -- Trava WASD — a câmera vai estar presa reproduzindo a gravação, não
     -- faz sentido deixar o jogador andar "às cegas" nesse meio tempo.

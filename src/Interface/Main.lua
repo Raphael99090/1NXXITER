@@ -41,6 +41,21 @@ function InterfaceMain:Load(Hub, Config, State)
 
     local customIcon = GetCustomIconAsset()
 
+    -- Gradiente escuro-pra-ciano sutil pro fundo da janela (a mesma tela
+    -- que mostra a key gate antes das abas aparecerem). Calculado uma vez
+    -- só; cai pro visual padrão do tema se WindUI:Gradient não existir
+    -- nessa versão da lib ou se o pcall falhar por qualquer motivo.
+    local windowBackground = nil
+    if type(WindUI.Gradient) == "function" then
+        local ok, gradient = pcall(function()
+            return WindUI:Gradient({
+                ["0"] = { Color = Color3.fromHex("#050B14"), Transparency = 1 },
+                ["100"] = { Color = Color3.fromHex("#0B2438"), Transparency = 0.85 },
+            }, { Rotation = 45 })
+        end)
+        if ok then windowBackground = gradient end
+    end
+
     -- [2] CRIAÇÃO DA JANELA PRINCIPAL
     -- A WindUI já resolve minimizar/restaurar em mobile sozinha via
     -- OpenButton (arrastável, com Draggable=true). O hack de bolinha
@@ -64,13 +79,36 @@ function InterfaceMain:Load(Hub, Config, State)
         -- por isto. "pandadevelopment" não pede Secret, só o ServiceId
         -- que já é público (aparece até na URL do GetKey). SaveKey evita
         -- pedir a key de novo toda vez que o hub carrega.
+        --
+        -- Note/URL/Thumbnail e o Title/Desc/Icon do provedor são só pra
+        -- deixar a tela de key com a cara do hub em vez do formulário
+        -- genérico padrão da lib — reaproveita o mesmo ícone customizado
+        -- (customIcon) que já usamos no topo da janela.
         KeySystem = Hub.KeyConfig and {
+            Note = "🐼 Ainda não tem key? Clica no link abaixo pra pegar a sua — travada automaticamente no seu HWID.",
+            URL = "https://ads.pandauth.com/getkey/" .. Hub.KeyConfig.ServiceId,
+            Thumbnail = {
+                Image = customIcon or "https://raw.githubusercontent.com/Raphael99090/1NXXITER/main/Assets/1784776415112.png",
+                Title = "1NXITER HUB",
+            },
             API = {
-                { Type = "pandadevelopment", ServiceId = Hub.KeyConfig.ServiceId },
+                {
+                    Title = "Panda Auth",
+                    Desc = "Validação server-side, key travada no seu HWID.",
+                    Icon = "shield-check",
+                    Type = "pandadevelopment",
+                    ServiceId = Hub.KeyConfig.ServiceId,
+                },
             },
             Key = Hub.KeyConfig.TestKey and { Hub.KeyConfig.TestKey } or nil,
             SaveKey = true,
         } or nil,
+
+        -- Gradiente escuro-pra-ciano sutil no fundo da janela (a mesma tela
+        -- que mostra a key gate antes das abas aparecerem) — só estética,
+        -- cai pro visual padrão do tema se WindUI:Gradient não existir
+        -- nessa versão da lib.
+        Background = windowBackground,
 
         OpenButton = {
             Title = "1NX",

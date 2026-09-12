@@ -2,6 +2,18 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
+## [3.5.0] - 2026-09-09
+
+### Adicionado
+- **TAS suspende Aimbot (Silent Aim) e FreeCam durante o replay**: os três brigavam pelo `workspace.CurrentCamera` (todos fazem `CameraType = Scriptable`). Agora `TASRecorder:SetHub(Hub)` é chamado uma vez em `main.lua` logo depois das Features carregarem; no início do replay, se Aimbot/FreeCam estiverem ligados, são desligados temporariamente e restaurados no fim (natural ou manual) — é a primeira dependência real entre duas Features do projeto, mas opcional por natureza (sem `SetHub`, TAS continua funcionando sozinho).
+- **Tela de Key personalizada**: `Note`, `URL` (link direto pro GetKey do Panda), `Thumbnail` (reaproveita o ícone já usado no topo da janela) e `Title`/`Desc`/`Icon` no provedor Panda Auth, em vez do formulário genérico padrão da lib. Fundo da janela ganhou um gradiente escuro-pra-ciano sutil (`WindUI:Gradient`, com fallback silencioso pro tema padrão se a versão da lib não suportar).
+
+## [3.4.2] - 2026-09-09
+
+### Corrigido
+- `docs/index.html`: os 3 links "Pegar minha key" apontavam pra `getkey/`, uma página que nunca existiu no repo (resquício de antes da migração pro Panda). Agora apontam direto pra `https://ads.pandauth.com/getkey/1nxxiter`.
+- `TASRecorder.lua`: guardas contra gravar e reproduzir ao mesmo tempo — `StartRecording()` recusa se um replay estiver ativo, `PlayRecording()` recusa se uma gravação estiver em andamento.
+
 ## [3.4.1] - 2026-09-09
 
 ### Corrigido (`Features/TASRecorder.lua`)
