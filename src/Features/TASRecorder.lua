@@ -510,30 +510,72 @@ function TASRecorder:PlayRecording(data)
     PlayerProgressBillboard = progressLabel.Parent
 
     task.spawn(function()
-        for i, wp in ipairs(waypoints) do
+        local i = 1
+        while i <= #waypoints do
             if PlayToken ~= myToken then return end -- outra sessão assumiu (Stop/novo Play)
 
             local h, r = GetHumanoid(), GetRoot()
             if not h or not r then break end
 
-            local target = ComponentsToPosition(wp.cf)
-            h:MoveTo(target)
-            if wp.st and JUMP_STATES[wp.st] then h.Jump = true end
+            local wp = waypoints[i]
 
-            if progressLabel and progressLabel.Parent then
-                progressLabel.Text = string.format("%.1fs | %.1f studs", wp.t, data.cumDist[i] or 0)
-            end
+            if wp.st and JUMP_STATES[wp.st] then
+                -- Início de um pulo: MoveTo ponto a ponto NÃO funciona no
+                -- ar (o alvo fica acima do chão, a gravidade puxa pra
+                -- baixo e o personagem nunca chega — é exatamente esse o
+                -- bug do "não faz o pulo"). Em vez disso: dispara o pulo
+                -- uma vez só e mira o MoveTo direto no ponto de POUSO
+                -- (o primeiro waypoint depois que volta a andar/cair) —
+                -- a física cuida da altura, o MoveTo só carrega o
+                -- impulso horizontal até o lugar certo.
+                local landIndex = i
+                while landIndex < #waypoints
+                    and (waypoints[landIndex].st == "Jumping" or waypoints[landIndex].st == "Freefall") do
+                    landIndex = landIndex + 1
+                end
 
-            local reached = false
-            local moveConn = h.MoveToFinished:Connect(function() reached = true end)
-            local waited = 0
-            while not reached and waited < 2 and PlayToken == myToken do
-                task.wait(0.05)
-                waited = waited + 0.05
-                local rr = GetRoot()
-                if rr and (rr.Position - target).Magnitude < 2 then break end
+                local landTarget = ComponentsToPosition(waypoints[landIndex].cf)
+                h.Jump = true
+                h:MoveTo(landTarget)
+
+                if progressLabel and progressLabel.Parent then
+                    progressLabel.Text = string.format("%.1fs | %.1f studs", wp.t, data.cumDist[i] or 0)
+                end
+
+                local waited = 0
+                while waited < 3 and PlayToken == myToken do
+                    task.wait(0.05)
+                    waited = waited + 0.05
+                    local hh = GetHumanoid()
+                    if not hh then break end
+                    local state = hh:GetState()
+                    if state ~= Enum.HumanoidStateType.Jumping and state ~= Enum.HumanoidStateType.Freefall then
+                        break -- já pousou (ou a física decidiu diferente) — segue o replay
+                    end
+                end
+
+                i = landIndex + 1
+            else
+                local target = ComponentsToPosition(wp.cf)
+                h:MoveTo(target)
+
+                if progressLabel and progressLabel.Parent then
+                    progressLabel.Text = string.format("%.1fs | %.1f studs", wp.t, data.cumDist[i] or 0)
+                end
+
+                local reached = false
+                local moveConn = h.MoveToFinished:Connect(function() reached = true end)
+                local waited = 0
+                while not reached and waited < 2 and PlayToken == myToken do
+                    task.wait(0.05)
+                    waited = waited + 0.05
+                    local rr = GetRoot()
+                    if rr and (rr.Position - target).Magnitude < 2 then break end
+                end
+                moveConn:Disconnect()
+
+                i = i + 1
             end
-            moveConn:Disconnect()
         end
 
         -- Chegou no último waypoint (ou saiu do loop porque o personagem

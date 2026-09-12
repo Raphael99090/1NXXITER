@@ -2,6 +2,12 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
+## [3.6.1] - 2026-09-09
+
+### Corrigido
+- **Pulo não funcionava no replay**: `Humanoid:MoveTo` mirava cada ponto gravado, inclusive os que estavam no ar — a gravidade sempre puxava o personagem de volta antes de chegar lá, então o pulo nunca acontecia de verdade. Agora, ao entrar num trecho gravado como "Jumping"/"Freefall", o replay dispara `Humanoid.Jump` uma vez só e mira o `MoveTo` direto no ponto de POUSO (o primeiro waypoint depois que volta a andar) — a física cuida da altura, o `MoveTo` só carrega o impulso horizontal até o lugar certo.
+- `TASTab.lua`: botão "Preparar Fantasma" removido — selecionar uma gravação na lista já prepara o fantasma automaticamente.
+
 ## [3.6.0] - 2026-09-09
 
 ### Alterado (reversão de arquitetura em `Features/TASRecorder.lua`)

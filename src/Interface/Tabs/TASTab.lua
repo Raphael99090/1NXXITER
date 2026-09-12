@@ -73,7 +73,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     -- ============================
     -- REPRODUÇÃO
     -- ============================
-    WindowTab:Section({ Title = "Reprodução", Desc = "Escolhe um trajeto salvo e prepara o fantasma.", Icon = "footprints" })
+    WindowTab:Section({ Title = "Reprodução", Desc = "Escolhe um trajeto salvo — o fantasma aparece sozinho.", Icon = "footprints" })
 
     WindowTab:Toggle({
         Flag = "TASArmed", Title = "Ativar Reproduzir", Icon = "play",
@@ -87,24 +87,19 @@ function Tab:Render(WindowTab, Hub, Config, State)
         Flag = "TASSelected", Title = "Gravações salvas",
         Values = Mod:ListRecordings(),
         SearchBarEnabled = true,
-        Callback = function(v) SelectedRecording = v end,
+        Callback = function(v)
+            SelectedRecording = v
+            local ok, err = Mod:PrepareGhost(v)
+            if ok then
+                WindUI:Notify({Title="Fantasma pronto", Content="Apareceu no início do trajeto \"" .. v .. "\".", Duration=3})
+            else
+                WindUI:Notify({Title="Erro", Content=err, Duration=4})
+            end
+        end,
     })
 
     WindowTab:Button({ Title = "Atualizar lista", Icon = "refresh-cw", Callback = function()
         RecDropdown:Refresh(Mod:ListRecordings())
-    end })
-
-    WindowTab:Button({ Title = "PREPARAR FANTASMA", Icon = "ghost", Callback = function()
-        if not SelectedRecording then
-            WindUI:Notify({Title="Reprodução", Content="Escolhe uma gravação na lista primeiro.", Duration=3})
-            return
-        end
-        local ok, err = Mod:PrepareGhost(SelectedRecording)
-        if ok then
-            WindUI:Notify({Title="Fantasma pronto", Content="Apareceu no início do trajeto \"" .. SelectedRecording .. "\".", Duration=4})
-        else
-            WindUI:Notify({Title="Erro", Content=err, Duration=4})
-        end
     end })
 
     WindowTab:Button({ Title = "Remover fantasma", Icon = "eraser", Callback = function()
