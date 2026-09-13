@@ -9,7 +9,15 @@ TASRecorder.Settings = {
 }
 
 local FOLDER = "1NXITER_HUB/TAS"
-local RECORD_INTERVAL = 0.15 -- segundos entre cada ponto gravado
+
+-- 0 = grava em TODO Heartbeat (~60x/s, taxa real do jogo). Era 0.15s
+-- antes (~6-7 pontos/s) — sparso demais: pulo (uma curva) e giros
+-- rápidos de câmera viravam reta interpolada entre 2 pontos distantes,
+-- parecendo "voar" em vez de seguir a trajetória de verdade. Gravando
+-- perto da taxa real, cada segmento fica curto o suficiente pra uma
+-- reta entre eles já aproximar bem a curva original. Custo: arquivo
+-- .tas fica maior (uns ~1MB por minuto gravado), aceitável pro uso.
+local RECORD_INTERVAL = 0
 local TRIGGER_RADIUS = 3.5 -- "dentro do fantasma" ~ tamanho de um personagem
 
 local JUMP_STATES = { Jumping = true }
@@ -195,7 +203,8 @@ end
 
 function TASRecorder:GetRecordingInfo()
     if not Recording or not RecordBuffer then return nil end
-    return { points = #RecordBuffer, seconds = #RecordBuffer * RECORD_INTERVAL }
+    local lastPoint = RecordBuffer[#RecordBuffer]
+    return { points = #RecordBuffer, seconds = lastPoint and lastPoint.t or 0 }
 end
 
 local function SanitizeName(name)

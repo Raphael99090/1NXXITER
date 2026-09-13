@@ -2,6 +2,12 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
+## [3.7.3] - 2026-09-09
+
+### Corrigido
+- **Replay parecia "voar" em vez de pular/virar rápido**: gravava só ~6-7 pontos por segundo (`RECORD_INTERVAL = 0.15`). Pulo é uma curva e giros rápidos de câmera/direção são mudanças bruscas — interpolando linearmente entre pontos tão espaçados, o resultado virava uma reta "flutuando" de um ponto a outro em vez de seguir a trajetória real. Pesquisei como replays de Roblox costumam gravar (perto da taxa real do jogo, ~60x/s) e apliquei isso: `RECORD_INTERVAL` agora é `0` — grava em todo `Heartbeat`. Com pontos tão próximos, a reta entre eles já aproxima bem qualquer curva, incluindo o arco do pulo. Custo: arquivo `.tas` fica maior (na faixa de ~1MB por minuto gravado).
+- `GetRecordingInfo()` calculava os segundos como `pontos × intervalo fixo` — com intervalo 0 isso sempre dava zero. Agora usa o timestamp real do último ponto gravado.
+
 ## [3.7.2] - 2026-09-09
 
 ### Corrigido
