@@ -173,7 +173,7 @@ function InterfaceMain:Load(Hub, Config, State)
         Combat = Window:Tab({ Title = "Combate", Icon = "swords" }),
         ESP = Window:Tab({ Title = "Visual", Icon = "eye" }),
         Movement = Window:Tab({ Title = "Movimento", Icon = "move" }),
-        Train = Window:Tab({ Title = "Treino", Icon = "dumbbell" }),
+        AutoJJs = Window:Tab({ Title = "Auto JJ's", Icon = "dumbbell" }),
         Camera = Window:Tab({ Title = "Câmera", Icon = "camera" }),
         SpyChat = Window:Tab({ Title = "Spy Chat", Icon = "message-square-more" }),
         TAS = Window:Tab({ Title = "TAS", Icon = "film" }),
@@ -203,7 +203,7 @@ function InterfaceMain:Load(Hub, Config, State)
     SafeRender("CombatTab", Tabs.Combat)
     SafeRender("ESPTab", Tabs.ESP)
     SafeRender("MovementTab", Tabs.Movement)
-    SafeRender("TrainTab", Tabs.Train)
+    SafeRender("AutoJJsTab", Tabs.AutoJJs)
     SafeRender("CameraTab", Tabs.Camera)
     SafeRender("SpyChatTab", Tabs.SpyChat)
     SafeRender("TASTab", Tabs.TAS)

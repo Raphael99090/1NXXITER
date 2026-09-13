@@ -2,6 +2,16 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
+## [3.8.0] - 2026-09-09
+
+### Alterado (renomeado AutoTrain → Auto JJ's, reconstrução completa)
+- **`Features/AutoTrain.lua` → `Features/AutoJJs.lua`**, **`Interface/Tabs/TrainTab.lua` → `Interface/Tabs/AutoJJsTab.lua`**. Removido de vez o sistema de 3 modos de exercício (Canguru com giro 360º, Flexão, Polichinelo) — virou um recurso só, focado em contagem no chat.
+- **Essenciais**: toggle único pra ligar/desligar (era botão antes), "Inicial"/"Final" no lugar de "StartNum"/"Quantity", "Pular" (toggle simples — o avatar pula a cada número, sem o giro/agachamento antigo).
+- **Formatação de Texto**: sufixo predefinido (`!`, `.`, `,`, `?`, Nenhum) ou customizado (texto livre, tem prioridade sobre o predefinido), com "Espaçamento" opcional entre número e sufixo.
+- **Intervalo — 3 modos mutuamente exclusivos** (só um ativo por vez, guardado em `Config.AutoJJs.IntervalMode`): Inteligente (calcula o delay pra bater um tempo total exato), Fixo (delay constante) e Dinâmico (aleatório entre mínimo/máximo, pra parecer digitação humana).
+- **Extras**: Modo reverso — inverte a contagem, começa no "Final" e desce até o "Inicial".
+- `Config` do recurso migrou de campos soltos (`Config.Mode`, `Config.StartNum`, etc.) pra `Config.AutoJJs.*` aninhado, junto com o padrão que Aimbot/ESP/Movement/Camera/SpyChat/TAS já usavam — os campos antigos foram removidos do `DefaultConfig` em `State.lua`.
+
 ## [3.7.4] - 2026-09-09
 
 ### Corrigido

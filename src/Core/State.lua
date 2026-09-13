@@ -7,13 +7,6 @@ local FILE_NAME = FOLDER_NAME .. "/Config_v3.json"
 
 -- [ FONTE DA VERDADE ]: Valores padrões do Hub
 local DefaultConfig = {
-    -- Treino
-    Mode = "Canguru",
-    Delay = 1.4,
-    StartNum = 0,
-    Quantity = 130,
-    IsCountdown = false,
-    AutoCrouch = false,
     AutoEquip = false,
     
     -- Atalhos

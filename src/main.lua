@@ -167,7 +167,7 @@ Hub.Core.State = LoadModule("Core", "State", "Core/State")
 
 -- ETAPA 2: Carregar Features (As funções de hack)
 local featuresList = {
-    "AutoTrain", "Aimbot", "ESP", "PlayerMods", "FreeCam", "SpyChat", "Visuals", "TASRecorder"
+    "AutoJJs", "Aimbot", "ESP", "PlayerMods", "FreeCam", "SpyChat", "Visuals", "TASRecorder"
 }
 for _, f in pairs(featuresList) do
     Hub.Features[f] = LoadModule("Feature", f, "Features/" .. f)
@@ -202,13 +202,13 @@ if Hub.Core.Lifecycle then
             return s.SpeedEnabled or s.JumpEnabled or s.Noclip or s.InfJump or s.Fly or s.AntiVoid
         end)
     end
-    -- AutoTrain não tem Settings.Enabled (o estado vive no RuntimeState) —
+    -- AutoJJs não tem Settings.Enabled (o estado vive no RuntimeState) —
     -- o getter dele é preso lá em Start(), quando o RuntimeState existe.
 end
 
 -- ETAPA 3: Carregar Tabs (O conteúdo de cada aba da UI)
 local tabsList = {
-    "OverviewTab", "CombatTab", "ESPTab", "MovementTab", "CameraTab", "SpyChatTab", "TrainTab", "ShortcutsTab", "SystemTab", "TASTab"
+    "OverviewTab", "CombatTab", "ESPTab", "MovementTab", "CameraTab", "SpyChatTab", "AutoJJsTab", "ShortcutsTab", "SystemTab", "TASTab"
 }
 for _, t in pairs(tabsList) do
     Hub.UI.Tabs[t] = LoadModule("Tab", t, "Interface/Tabs/" .. t)
@@ -327,10 +327,10 @@ local function Start()
     Hub._Config = Config
     Hub:ApplyConfig()
 
-    -- AutoTrain não tem Settings.Enabled (o estado vive no RuntimeState),
+    -- AutoJJs não tem Settings.Enabled (o estado vive no RuntimeState),
     -- então o getter dele só dá pra prender aqui, depois que RuntimeState existe.
-    if Hub.Core.Lifecycle and Hub.Features.AutoTrain then
-        Hub.Core.Lifecycle:SetActiveGetter("AutoTrain", function() return RuntimeState.IsRunning end)
+    if Hub.Core.Lifecycle and Hub.Features.AutoJJs then
+        Hub.Core.Lifecycle:SetActiveGetter("AutoJJs", function() return RuntimeState.IsRunning end)
     end
 
     -- Salva sozinho em segundo plano (respeita Config.AutoSave)

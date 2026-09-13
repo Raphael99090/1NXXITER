@@ -62,10 +62,11 @@ Diferente de scripts comuns, a v3.0 utiliza uma estrutura de **Software Modular*
 
 ## ✨ Funcionalidades
 
-### ⚔️ Treino Automatizado
-*   **Modos Suportados:** Canguru (360º Physics), Flexão e Polichinelo.
-*   **Inteligência de Chat:** Conversão Numérica avançada para o formato PT-BR.
-*   **Customização:** Controle detalhado de delay e quantidade de séries.
+### 🔢 Auto JJ's
+*   **Contagem Completa:** Inicial/Final configuráveis, modo reverso (decrescente) e conversão numérica PT-BR.
+*   **Formatação de Texto:** Sufixo predefinido ou customizado, com ou sem espaçamento.
+*   **3 Modos de Intervalo:** Inteligente (calcula o delay pro tempo total certo), fixo ou dinâmico (aleatório, simula digitação humana) — só um ativo por vez.
+*   **Pular:** Faz o avatar pular fisicamente a cada número enviado, opcional.
 
 ### 🎯 Combate & Visual
 *   **Aimbot Pro:** Suavidade calculada por DeltaTime, checagem rigorosa de visibilidade, prioridade de alvo (mais perto/menor vida) e parte-alvo selecionável (Root/Head/Torso). Modo Silent Aim incluso!
@@ -87,7 +88,7 @@ O repositório é organizado de maneira profissional e escalável:
 src/
 ├── main.lua            # Loader principal e montador da interface (Key System)
 ├── Core/               # Kernel: State Manager, Utils, Services
-├── Features/           # Lógica: Aimbot, ESP, PlayerMods, AutoTrain
+├── Features/           # Lógica: Aimbot, ESP, PlayerMods, AutoJJs
 └── Interface/          # UI: Janela Principal e Módulos das Abas (Tabs)
 ```
 
