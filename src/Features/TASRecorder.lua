@@ -39,6 +39,7 @@ local PlayToken = 0
 local PlayHeartbeatConn = nil
 local LockedControls = nil
 local PlayerProgressBillboard = nil
+local OriginalWalkSpeed = nil
 
 -- Referência opcional pro Hub inteiro — só usada pra suspender outras
 -- Features que também disputam o controle da câmera (Aimbot Silent Aim,
@@ -491,6 +492,12 @@ local function ReleaseControl()
         PlayerProgressBillboard = nil
     end
 
+    if OriginalWalkSpeed ~= nil then
+        local h = GetHumanoid()
+        if h then h.WalkSpeed = OriginalWalkSpeed end
+        OriginalWalkSpeed = nil
+    end
+
     if LockedControls then
         pcall(function() LockedControls:Enable() end)
         LockedControls = nil
@@ -552,6 +559,13 @@ function TASRecorder:PlayRecording(data)
     root.Anchored = true
     root.CFrame = ComponentsToCFrame(waypoints[1].cf)
 
+    -- O script de animação do próprio jogo (Animate) decide andar/correr/
+    -- parado olhando o WalkSpeed/velocidade do Humanoid — não o CFrame
+    -- que a gente seta direto. Sem isso, ele acha que "no chão" sempre
+    -- significa "andando" e fica animando andar mesmo parado. Guarda o
+    -- valor original pra restaurar em ReleaseControl().
+    OriginalWalkSpeed = hum.WalkSpeed
+
     local progressLabel = CreateLabel(root)
     PlayerProgressBillboard = progressLabel.Parent
 
@@ -599,15 +613,21 @@ function TASRecorder:PlayRecording(data)
             progressLabel.Text = string.format("%.1fs | %.1f studs", elapsed, data.cumDist[segIndex] + segLen * alpha)
         end
 
-        -- Cosmético: tenta acompanhar a animação de pulo/queda/corrida
-        -- com base no estado gravado — não afeta a posição (essa já é
-        -- 100% fiel pelo CFrame acima), só ajuda o visual a combinar.
+        -- Animação: pulo/queda são estados reais, então força mesmo
+        -- (Anchored trava a física, o motor não detecta isso sozinho).
+        -- Pra andar/correr/parado, em vez de forçar "Running" (que só
+        -- significa "no chão", não distingue parado de andando), reflete
+        -- a velocidade REAL do trecho gravado no WalkSpeed — o próprio
+        -- Animate do jogo já sabe decidir idle/walk/run a partir disso,
+        -- sem a gente precisar adivinhar.
+        local segDist = (data.cumDist[segIndex + 1] or data.cumDist[segIndex]) - data.cumDist[segIndex]
+        h.WalkSpeed = segDist / span
+
         if a.st and a.st ~= lastAppliedState then
             lastAppliedState = a.st
             pcall(function()
                 if JUMP_STATES[a.st] then h:ChangeState(Enum.HumanoidStateType.Jumping)
                 elseif a.st == "Freefall" then h:ChangeState(Enum.HumanoidStateType.Freefall)
-                elseif a.st == "Running" then h:ChangeState(Enum.HumanoidStateType.Running)
                 end
             end)
         end

@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
+## [3.7.2] - 2026-09-09
+
+### Corrigido
+- **Animação de andar tocando parado durante o replay**: o replay forçava `Humanoid:ChangeState(Running)` sempre que o estado gravado era "Running" — só que esse estado significa só "no chão", não distingue parado de andando (Roblox não tem um `HumanoidStateType.Idle` separado). O script de animação do próprio jogo decide walk/run/idle olhando o `WalkSpeed`/velocidade, não o CFrame que a gente seta direto. Agora, a cada frame, calcula a velocidade REAL do trecho gravado (`distância do segmento / tempo do segmento`) e reflete isso no `Humanoid.WalkSpeed` — o Animate do próprio jogo escolhe a animação certa sozinho a partir disso, sem a gente precisar adivinhar. `WalkSpeed` original é salvo e restaurado em `ReleaseControl()`.
+
 ## [3.7.1] - 2026-09-09
 
 ### Corrigido
