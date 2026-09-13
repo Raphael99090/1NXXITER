@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
+## [3.7.4] - 2026-09-09
+
+### Corrigido
+- **Personagem "flutuava" depois de pular e a animação de andar continuava parado**: efeito colateral do fix anterior — ao forçar `ChangeState(Jumping/Freefall)`, o Humanoid nunca voltava sozinho pra "Running" depois (a raiz tá `Anchored`, o motor não detecta aterrissagem por conta própria). Ficava preso no estado aéreo pra sempre: a animação de queda nunca saía (parecia flutuar) e o `WalkSpeed` parava de ter efeito, porque o Animate do jogo só reage a mudanças de `WalkSpeed` enquanto o Humanoid está em "Running". Agora, ao sair de um trecho de pulo/queda gravado, o replay força `ChangeState(Running)` de volta.
+
 ## [3.7.3] - 2026-09-09
 
 ### Corrigido

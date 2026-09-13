@@ -633,10 +633,22 @@ function TASRecorder:PlayRecording(data)
         h.WalkSpeed = segDist / span
 
         if a.st and a.st ~= lastAppliedState then
+            local wasAirborne = lastAppliedState == "Jumping" or lastAppliedState == "Freefall"
             lastAppliedState = a.st
             pcall(function()
-                if JUMP_STATES[a.st] then h:ChangeState(Enum.HumanoidStateType.Jumping)
-                elseif a.st == "Freefall" then h:ChangeState(Enum.HumanoidStateType.Freefall)
+                if JUMP_STATES[a.st] then
+                    h:ChangeState(Enum.HumanoidStateType.Jumping)
+                elseif a.st == "Freefall" then
+                    h:ChangeState(Enum.HumanoidStateType.Freefall)
+                elseif wasAirborne then
+                    -- Voltou pro chão depois de pulo/queda — sem isso o
+                    -- Humanoid ficava preso em Jumping/Freefall pra
+                    -- sempre (Anchored impede o motor de perceber que
+                    -- "aterrissou" sozinho). Dois efeitos colaterais
+                    -- disso: a animação de queda nunca saía (parecia
+                    -- flutuar) e o WalkSpeed parava de ter efeito, porque
+                    -- o Animate só escuta enquanto o Humanoid tá Running.
+                    h:ChangeState(Enum.HumanoidStateType.Running)
                 end
             end)
         end
