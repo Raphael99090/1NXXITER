@@ -17,26 +17,26 @@ function Tab:Render(WindowTab, Hub, Config, State)
     local StateMod = Hub.Core.State
     local WindUI = Hub.UI.Library
 
-    WindowTab:Section({ Title = "Aparência", Desc = "Mude o estilo visual do menu.", Icon = "palette" })
-    
-    WindowTab:Dropdown({
+    local Aparencia = WindowTab:Section({ Title = "Aparência", Desc = "Mude o estilo visual do menu.", Icon = "palette", Opened = true })
+
+    Aparencia:Dropdown({
         Flag = "UITheme", Title = "Tema do Hub", Desc = "Altera as cores da interface instantaneamente.",
         Values = (function() local names = {}; for name in pairs(WindUI:GetThemes()) do table.insert(names, name) end table.sort(names); return names end)(),
         Value = WindUI:GetCurrentTheme(),
         Callback = function(v) WindUI:SetTheme(v); Config.UITheme = v end
     })
 
-    WindowTab:Section({ Title = "Ferramentas do Servidor", Desc = "Ações para reconectar e estabilizar.", Icon = "server" })
-    
-    WindowTab:Button({ Title = "FPS BOOST (Anti-Lag)", Desc = "Remove texturas do mapa para melhorar FPS.", Icon = "zap", Callback = function() Utils:AntiLag() end })
-    WindowTab:Button({ Title = "REJOIN", Desc = "Entra novamente neste mesmo servidor.", Icon = "rotate-cw", Callback = function() Utils:Rejoin() end })
-    WindowTab:Button({ Title = "SERVER HOP", Desc = "Busca e entra em um servidor mais vazio.", Icon = "globe", Callback = function() Utils:ServerHop() end })
-    WindowTab:Toggle({ Flag = "AutoRejoinE", Title = "Auto-Rejoin (Crash/Kick)", Desc = "Volta ao jogo se for desconectado.", Value = Config.AutoRejoin or false, Callback = function(v) Config.AutoRejoin = v end })
-    WindowTab:Toggle({ Flag = "AntiAFKE", Title = "Anti-AFK", Desc = "Evita ser kickado por inatividade.", Icon = "user-check", Value = Config.AntiAFK ~= false, Callback = function(v) Config.AntiAFK = v; Utils:ToggleAntiAFK(v) end })
+    local Servidor = WindowTab:Section({ Title = "Ferramentas do Servidor", Desc = "Ações para reconectar e estabilizar.", Icon = "server", Opened = false })
 
-    WindowTab:Section({ Title = "Comunidade", Desc = "Fique por dentro das atualizações.", Icon = "users" })
+    Servidor:Button({ Title = "FPS BOOST (Anti-Lag)", Desc = "Remove texturas do mapa para melhorar FPS.", Icon = "zap", Callback = function() Utils:AntiLag() end })
+    Servidor:Button({ Title = "REJOIN", Desc = "Entra novamente neste mesmo servidor.", Icon = "rotate-cw", Callback = function() Utils:Rejoin() end })
+    Servidor:Button({ Title = "SERVER HOP", Desc = "Busca e entra em um servidor mais vazio.", Icon = "globe", Callback = function() Utils:ServerHop() end })
+    Servidor:Toggle({ Flag = "AutoRejoinE", Title = "Auto-Rejoin (Crash/Kick)", Desc = "Volta ao jogo se for desconectado.", Value = Config.AutoRejoin or false, Callback = function(v) Config.AutoRejoin = v end })
+    Servidor:Toggle({ Flag = "AntiAFKE", Title = "Anti-AFK", Desc = "Evita ser kickado por inatividade.", Icon = "user-check", Value = Config.AntiAFK ~= false, Callback = function(v) Config.AntiAFK = v; Utils:ToggleAntiAFK(v) end })
 
-    WindowTab:Paragraph({
+    local Comunidade = WindowTab:Section({ Title = "Comunidade", Desc = "Fique por dentro das atualizações.", Icon = "users", Opened = false })
+
+    Comunidade:Paragraph({
         Title = "Servidor do Discord",
         Desc = 'Comunidade 1NXITER Oficial.',
         Image = "https://cdn.simpleicons.org/discord", ImageSize = 28, Color = "White",
@@ -50,13 +50,13 @@ function Tab:Render(WindowTab, Hub, Config, State)
         }
     })
 
-    WindowTab:Section({ Title = "Gerenciamento de Dados", Desc = "Salvar e restaurar dados locais.", Icon = "database" })
+    local Dados = WindowTab:Section({ Title = "Gerenciamento de Dados", Desc = "Salvar e restaurar dados locais.", Icon = "database", Opened = false })
 
-    WindowTab:Button({ Title = "SALVAR CONFIGURAÇÕES", Desc = "O hub já salva automaticamente a cada 8s, mas você pode forçar.", Icon = "save", Callback = function()
+    Dados:Button({ Title = "SALVAR CONFIGURAÇÕES", Desc = "O hub já salva automaticamente a cada 8s, mas você pode forçar.", Icon = "save", Callback = function()
         StateMod:SaveConfig(Config); WindUI:Notify({Title="Salvo", Content="JSON atualizado!", Duration=3})
     end })
 
-    WindowTab:Button({ Title = "RESTAURAR PADRÕES DE FÁBRICA", Desc = "Desativa recursos e restaura as configurações para os valores originais.", Icon = "rotate-ccw", Callback = function()
+    Dados:Button({ Title = "RESTAURAR PADRÕES DE FÁBRICA", Desc = "Desativa recursos e restaura as configurações para os valores originais.", Icon = "rotate-ccw", Callback = function()
         local Window = Hub.UI.Window
         local function DoReset()
             StateMod:ResetConfig(Config)
@@ -78,10 +78,10 @@ function Tab:Render(WindowTab, Hub, Config, State)
         end
     end })
 
-    WindowTab:Section({ Title = "Diagnóstico", Desc = "Estado real de cada módulo do Hub (Hub Doctor).", Icon = "stethoscope" })
-
+    -- Status do Diagnóstico fica sempre visível (não fecha), o botão de
+    -- imprimir fica dentro da categoria que pode ser minimizada.
     local Lifecycle = Hub.Core.Lifecycle
-    local DoctorStatus = WindowTab:Section({ Title = "Status dos Módulos", Desc = "Carregando..." })
+    local DoctorStatus = WindowTab:Section({ Title = "Status dos Módulos", Desc = "Carregando...", Opened = true })
 
     if Lifecycle then
         task.spawn(function()
@@ -108,7 +108,9 @@ function Tab:Render(WindowTab, Hub, Config, State)
         DoctorStatus:SetDesc("Lifecycle Manager indisponível nessa sessão.")
     end
 
-    WindowTab:Button({ Title = "IMPRIMIR DIAGNÓSTICO (F9)", Desc = "Mostra estágio e erro de cada módulo, um por um, no console.", Icon = "terminal", Callback = function()
+    local Diagnostico = WindowTab:Section({ Title = "Diagnóstico", Desc = "Estado real de cada módulo do Hub (Hub Doctor).", Icon = "stethoscope", Opened = false })
+
+    Diagnostico:Button({ Title = "IMPRIMIR DIAGNÓSTICO (F9)", Desc = "Mostra estágio e erro de cada módulo, um por um, no console.", Icon = "terminal", Callback = function()
         if Lifecycle then
             Lifecycle:Print()
             WindUI:Notify({Title="Diagnóstico", Content="Impresso no console (F9).", Duration=3})
@@ -117,9 +119,9 @@ function Tab:Render(WindowTab, Hub, Config, State)
         end
     end })
 
-    WindowTab:Section({ Title = "Perigo", Desc = "Encerramento total do script.", Icon = "alert-triangle" })
+    local Perigo = WindowTab:Section({ Title = "Perigo", Desc = "Encerramento total do script.", Icon = "alert-triangle", Opened = false })
 
-    WindowTab:Button({ Title = "FECHAR HUB TOTALMENTE", Desc = "Remove do jogo e para todos os loops de fundo.", Icon = "power", Callback = function()
+    Perigo:Button({ Title = "FECHAR HUB TOTALMENTE", Desc = "Remove do jogo e para todos os loops de fundo.", Icon = "power", Callback = function()
         local Window = Hub.UI.Window
         local function DoClose()
             Hub:Unload()

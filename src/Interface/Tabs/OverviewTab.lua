@@ -6,11 +6,11 @@ function Tab:Render(WindowTab, Hub, Config, State)
     
     local startTime = State.LoadedAtTick or os.clock()
 
-    WindowTab:Section({ Title = "Bem-vindo ao 1NXITER HUB", Desc = "Estatísticas em tempo real da sua sessão e do servidor.", Icon = "activity" })
+    WindowTab:Section({ Title = "Bem-vindo ao 1NXITER HUB", Desc = "Estatísticas em tempo real da sua sessão e do servidor.", Icon = "activity", Opened = true })
 
-    local PlayerStats = WindowTab:Section({ Title = "Informações do Jogador", Desc = "Carregando..." })
-    local ServerStats = WindowTab:Section({ Title = "Informações do Servidor", Desc = "Carregando..." })
-    local HubStats = WindowTab:Section({ Title = "Status da Sessão", Desc = "Carregando..." })
+    local PlayerStats = WindowTab:Section({ Title = "Informações do Jogador", Desc = "Carregando...", Opened = true })
+    local ServerStats = WindowTab:Section({ Title = "Informações do Servidor", Desc = "Carregando...", Opened = true })
+    local HubStats = WindowTab:Section({ Title = "Status da Sessão", Desc = "Carregando...", Opened = true })
 
     local function formatTime(seconds)
         local h = math.floor(seconds / 3600)

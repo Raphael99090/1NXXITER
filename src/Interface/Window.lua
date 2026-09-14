@@ -176,6 +176,7 @@ function InterfaceMain:Load(Hub, Config, State)
         AutoJJs = Window:Tab({ Title = "Auto JJ's", Icon = "dumbbell" }),
         Camera = Window:Tab({ Title = "Câmera", Icon = "camera" }),
         SpyChat = Window:Tab({ Title = "Spy Chat", Icon = "message-square-more" }),
+        Grammar = Window:Tab({ Title = "Gramática", Icon = "spell-check" }),
         TAS = Window:Tab({ Title = "TAS", Icon = "film" }),
         Shortcuts = Window:Tab({ Title = "Atalhos", Icon = "keyboard" }),
         System = Window:Tab({ Title = "Sistema", Icon = "settings" })
@@ -206,6 +207,7 @@ function InterfaceMain:Load(Hub, Config, State)
     SafeRender("AutoJJsTab", Tabs.AutoJJs)
     SafeRender("CameraTab", Tabs.Camera)
     SafeRender("SpyChatTab", Tabs.SpyChat)
+    SafeRender("GrammarTab", Tabs.Grammar)
     SafeRender("TASTab", Tabs.TAS)
     SafeRender("ShortcutsTab", Tabs.Shortcuts)
     SafeRender("SystemTab", Tabs.System)

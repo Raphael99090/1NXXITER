@@ -2,6 +2,19 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
+## [3.10.0] - 2026-09-09
+
+### Adicionado
+- **Aba Gramática**: campo de texto + 3 botões (Corrigir, Copiar, Enviar no Chat). "Corrigir" chama a API do Gemini (`generateContent`) usando a API Key do usuário (salva localmente, configurável na seção Configuração), com modelo escolhível por dropdown (`gemini-3.1-flash-lite` / `gemini-2.5-flash-lite`) ou campo de modelo customizado (texto livre, tem prioridade — o Google renomeia modelos com frequência, então isso evita depender só das opções fixas ficarem certas pra sempre). "Copiar" e "Enviar no Chat" usam o resultado corrigido quando disponível, senão o texto original digitado.
+- Novo módulo `Features/Grammar.lua` (detecta `http_request`/`request`/`syn.request` do executor pra fazer o POST externo — `game:HttpGet` só faz GET) + `Interface/Tabs/GrammarTab.lua`, registrados no Lifecycle Manager.
+- **Limitação conhecida**: o campo de texto da WindUI é de uma linha só — não confirmei um modo "Multiline" na documentação oficial. Texto longo funciona (o Gemini recebe a string inteira), só não quebra linha visualmente no campo.
+
+## [3.9.0] - 2026-09-09
+
+### Corrigido/Alterado (Sections viram categorias de verdade, minimizáveis)
+- Descoberto na doc oficial da WindUI: `Section` é um CONTÊINER de verdade (`Section:Toggle()`, `Section:Button()`, etc.), com `Opened = true/false` controlando se começa aberta ou fechada — não só um título decorativo. O projeto inteiro usava `Section` só como divisor visual, sem aninhar nada dentro, então nenhuma categoria minimizava de verdade. Corrigido em **todas as abas**: todo elemento agora é filho da Section correta, e cada categoria pode ser fechada/aberta independente.
+- De quebra, corrigidos dois lugares sem guarda de `nil`: `MovementTab.lua` (Feature `PlayerMods` podia não existir) e `ShortcutsTab.lua` (`Hub.Features.Aimbot.Settings.AimKey` acessado sem checar se o Aimbot carregou).
+
 ## [3.8.0] - 2026-09-09
 
 ### Alterado (renomeado AutoTrain → Auto JJ's, reconstrução completa)

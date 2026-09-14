@@ -167,7 +167,7 @@ Hub.Core.State = LoadModule("Core", "State", "Core/State")
 
 -- ETAPA 2: Carregar Features (As funções de hack)
 local featuresList = {
-    "AutoJJs", "Aimbot", "ESP", "PlayerMods", "FreeCam", "SpyChat", "Visuals", "TASRecorder"
+    "AutoJJs", "Aimbot", "ESP", "PlayerMods", "FreeCam", "SpyChat", "Visuals", "TASRecorder", "Grammar"
 }
 for _, f in pairs(featuresList) do
     Hub.Features[f] = LoadModule("Feature", f, "Features/" .. f)
@@ -208,7 +208,7 @@ end
 
 -- ETAPA 3: Carregar Tabs (O conteúdo de cada aba da UI)
 local tabsList = {
-    "OverviewTab", "CombatTab", "ESPTab", "MovementTab", "CameraTab", "SpyChatTab", "AutoJJsTab", "ShortcutsTab", "SystemTab", "TASTab"
+    "OverviewTab", "CombatTab", "ESPTab", "MovementTab", "CameraTab", "SpyChatTab", "AutoJJsTab", "GrammarTab", "ShortcutsTab", "SystemTab", "TASTab"
 }
 for _, t in pairs(tabsList) do
     Hub.UI.Tabs[t] = LoadModule("Tab", t, "Interface/Tabs/" .. t)

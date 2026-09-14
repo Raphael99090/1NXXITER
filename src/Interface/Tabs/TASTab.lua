@@ -11,20 +11,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
         return
     end
 
-    -- ============================
-    -- GRAVAÇÃO
-    -- ============================
-    WindowTab:Section({ Title = "Gravação", Desc = "Grava seu trajeto pra reproduzir depois.", Icon = "circle-dot" })
-
-    local RecordName = "trajeto"
-    WindowTab:Input({
-        Title = "Nome da gravação",
-        Value = RecordName,
-        PlaceholderText = "ex: rota_treino",
-        Callback = function(text) RecordName = text end,
-    })
-
-    local RecStatus = WindowTab:Section({ Title = "Status", Desc = "Parado." })
+    local RecStatus = WindowTab:Section({ Title = "Status", Desc = "Parado.", Opened = true })
 
     task.spawn(function()
         while getgenv().InxiterHubLoaded do
@@ -45,7 +32,20 @@ function Tab:Render(WindowTab, Hub, Config, State)
         end
     end)
 
-    WindowTab:Button({ Title = "INICIAR GRAVAÇÃO", Icon = "circle-dot", Callback = function()
+    -- ============================
+    -- GRAVAÇÃO
+    -- ============================
+    local Gravacao = WindowTab:Section({ Title = "Gravação", Desc = "Grava seu trajeto pra reproduzir depois.", Icon = "circle-dot", Opened = true })
+
+    local RecordName = "trajeto"
+    Gravacao:Input({
+        Title = "Nome da gravação",
+        Value = RecordName,
+        PlaceholderText = "ex: rota_treino",
+        Callback = function(text) RecordName = text end,
+    })
+
+    Gravacao:Button({ Title = "INICIAR GRAVAÇÃO", Icon = "circle-dot", Callback = function()
         local ok, err = Mod:StartRecording()
         if ok then
             WindUI:Notify({Title="Gravação", Content="Começou! Anda pelo trajeto e depois clica em Parar e Salvar.", Duration=4})
@@ -54,7 +54,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
         end
     end })
 
-    WindowTab:Button({ Title = "PARAR E SALVAR", Icon = "save", Callback = function()
+    Gravacao:Button({ Title = "PARAR E SALVAR", Icon = "save", Callback = function()
         local ok, result = Mod:SaveRecording(RecordName)
         if ok then
             WindUI:Notify({Title="Gravação salva", Content="Salvo como \"" .. result .. "\".", Duration=4})
@@ -63,7 +63,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
         end
     end })
 
-    WindowTab:Button({ Title = "Cancelar gravação", Icon = "x", Callback = function()
+    Gravacao:Button({ Title = "Cancelar gravação", Icon = "x", Callback = function()
         if Mod:IsRecording() then
             Mod:StopRecording()
             WindUI:Notify({Title="Gravação", Content="Cancelada, nada foi salvo.", Duration=3})
@@ -73,9 +73,9 @@ function Tab:Render(WindowTab, Hub, Config, State)
     -- ============================
     -- REPRODUÇÃO
     -- ============================
-    WindowTab:Section({ Title = "Reprodução", Desc = "Escolhe um trajeto salvo — o fantasma aparece sozinho.", Icon = "footprints" })
+    local Reproducao = WindowTab:Section({ Title = "Reprodução", Desc = "Escolhe um trajeto salvo — o fantasma aparece sozinho.", Icon = "footprints", Opened = true })
 
-    WindowTab:Toggle({
+    Reproducao:Toggle({
         Flag = "TASArmed", Title = "Ativar Reproduzir", Icon = "play",
         Desc = "Enquanto ligado, entrar dentro do fantasma dispara o replay sozinho.",
         Value = Cfg.ReproduzirArmed == true,
@@ -83,7 +83,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
     })
 
     local SelectedRecording = nil
-    local RecDropdown = WindowTab:Dropdown({
+    local RecDropdown = Reproducao:Dropdown({
         Flag = "TASSelected", Title = "Gravações salvas",
         Values = Mod:ListRecordings(),
         SearchBarEnabled = true,
@@ -98,23 +98,23 @@ function Tab:Render(WindowTab, Hub, Config, State)
         end,
     })
 
-    WindowTab:Button({ Title = "Atualizar lista", Icon = "refresh-cw", Callback = function()
+    Reproducao:Button({ Title = "Atualizar lista", Icon = "refresh-cw", Callback = function()
         RecDropdown:Refresh(Mod:ListRecordings())
     end })
 
-    WindowTab:Button({ Title = "Remover fantasma", Icon = "eraser", Callback = function()
+    Reproducao:Button({ Title = "Remover fantasma", Icon = "eraser", Callback = function()
         Mod:RemoveGhost()
         WindUI:Notify({Title="Reprodução", Content="Fantasma removido.", Duration=3})
     end })
 
-    WindowTab:Button({ Title = "Parar reprodução", Icon = "square", Callback = function()
+    Reproducao:Button({ Title = "Parar reprodução", Icon = "square", Callback = function()
         if Mod:IsPlaying() then
             Mod:StopPlayback()
             WindUI:Notify({Title="Reprodução", Content="Interrompida — controle devolvido.", Duration=3})
         end
     end })
 
-    WindowTab:Button({ Title = "Apagar gravação selecionada", Icon = "trash-2", Callback = function()
+    Reproducao:Button({ Title = "Apagar gravação selecionada", Icon = "trash-2", Callback = function()
         if not SelectedRecording then
             WindUI:Notify({Title="Reprodução", Content="Escolhe uma gravação na lista primeiro.", Duration=3})
             return

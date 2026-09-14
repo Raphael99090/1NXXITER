@@ -10,8 +10,8 @@ function Tab:Render(WindowTab, Hub, Config, State)
         return
     end
 
-    WindowTab:Section({ Title = "Spy Chat", Desc = "Lê chat privado e comandos do servidor em uma UI arrastável.", Icon = "message-square-more" })
-    WindowTab:Toggle({
+    local Spy1 = WindowTab:Section({ Title = "Spy Chat", Desc = "Lê chat privado e comandos do servidor em uma UI arrastável.", Icon = "message-square-more", Opened = true })
+    Spy1:Toggle({
         Flag = "SpyE", Title = "Ativar Spy Chat", Icon = "message-square-more",
         Desc = "Mostra mensagens que normalmente só quem está por perto veria.",
         Value = Cfg.Enabled == true,

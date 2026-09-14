@@ -78,6 +78,11 @@ Diferente de scripts comuns, a v3.0 utiliza uma estrutura de **Software Modular*
 *   **FreeCam Orbital:** Câmera livre total com controle refinado de sensibilidade de movimento.
 *   **System Tools:** Utilitários essenciais como Anti-AFK, Auto-Rejoin, Server Hop rápido e Otimizador de FPS (FPS Boost).
 
+### 📝 Gramática
+*   **Corretor via IA:** Corrige gramática/ortografia usando a API do Gemini (modelos leves e gratuitos, configurável).
+*   **API Key própria:** Você usa sua própria key do Google AI Studio — nada passa pelos servidores do 1NXITER.
+*   **Ações Rápidas:** Corrigir, copiar e enviar direto no chat do jogo.
+
 ---
 
 ## 📂 Estrutura do Repositório
