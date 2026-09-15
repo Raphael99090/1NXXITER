@@ -1,6 +1,10 @@
 
+-- Anti-Lag reversível: guarda os valores originais de cada instância
+-- antes de mexer, pra dar pra restaurar depois — antes disso era uma
+-- alteração destrutiva sem volta na sessão inteira.
 local Utils = {}
 Utils._connections = {}
+Utils._antiLagBackup = nil
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -108,44 +112,105 @@ function Utils:ServerHop()
     if not success then TeleportService:Teleport(game.PlaceId, Player) end
 end
 
-function Utils:AntiLag()
-    local Terrain = workspace:FindFirstChildOfClass("Terrain")
-    if Terrain then
-        Terrain.WaterWaveSize = 0
-        Terrain.WaterWaveSpeed = 0
-        Terrain.WaterReflectance = 0
-        Terrain.WaterTransparency = 0
-        pcall(function() sethiddenproperty(Terrain, "Decoration", false) end)
-    end
-    
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 9e9
-    Lighting.Brightness = 2
-    
-    for _, v in pairs(Lighting:GetDescendants()) do
-        if v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("Atmosphere") then
-            v.Enabled = false
+function Utils:ToggleAntiLag(state)
+    if state then
+        if self._antiLagBackup then return end -- já ativo, não sobrescreve o backup
+
+        local backup = { parts = {}, decals = {}, particles = {}, effects = {}, lighting = {} }
+
+        local Terrain = workspace:FindFirstChildOfClass("Terrain")
+        if Terrain then
+            backup.terrain = {
+                WaterWaveSize = Terrain.WaterWaveSize,
+                WaterWaveSpeed = Terrain.WaterWaveSpeed,
+                WaterReflectance = Terrain.WaterReflectance,
+                WaterTransparency = Terrain.WaterTransparency,
+            }
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+            Terrain.WaterReflectance = 0
+            Terrain.WaterTransparency = 0
+            pcall(function() sethiddenproperty(Terrain, "Decoration", false) end)
         end
-    end
-    
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-    
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.Material = Enum.Material.SmoothPlastic
-            v.Reflectance = 0
-            v.CastShadow = false
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v.Transparency = 1
-        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
-            v.Enabled = false
+
+        backup.lighting = {
+            GlobalShadows = Lighting.GlobalShadows,
+            FogEnd = Lighting.FogEnd,
+            Brightness = Lighting.Brightness,
+        }
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        Lighting.Brightness = 2
+
+        for _, v in pairs(Lighting:GetDescendants()) do
+            if v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("Atmosphere") then
+                backup.effects[v] = v.Enabled
+                v.Enabled = false
+            end
         end
+
+        backup.qualityLevel = settings().Rendering.QualityLevel
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                backup.parts[v] = { Material = v.Material, Reflectance = v.Reflectance, CastShadow = v.CastShadow }
+                v.Material = Enum.Material.SmoothPlastic
+                v.Reflectance = 0
+                v.CastShadow = false
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                backup.decals[v] = v.Transparency
+                v.Transparency = 1
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                backup.particles[v] = v.Enabled
+                v.Enabled = false
+            end
+        end
+
+        self._antiLagBackup = backup
+    else
+        local backup = self._antiLagBackup
+        if not backup then return end
+
+        local Terrain = workspace:FindFirstChildOfClass("Terrain")
+        if Terrain and backup.terrain then
+            for prop, val in pairs(backup.terrain) do pcall(function() Terrain[prop] = val end) end
+        end
+
+        for prop, val in pairs(backup.lighting) do pcall(function() Lighting[prop] = val end) end
+        if backup.qualityLevel then pcall(function() settings().Rendering.QualityLevel = backup.qualityLevel end) end
+
+        for inst, wasEnabled in pairs(backup.effects) do
+            if inst and inst.Parent then pcall(function() inst.Enabled = wasEnabled end) end
+        end
+        for inst, props in pairs(backup.parts) do
+            if inst and inst.Parent then
+                pcall(function()
+                    inst.Material = props.Material
+                    inst.Reflectance = props.Reflectance
+                    inst.CastShadow = props.CastShadow
+                end)
+            end
+        end
+        for inst, transp in pairs(backup.decals) do
+            if inst and inst.Parent then pcall(function() inst.Transparency = transp end) end
+        end
+        for inst, wasEnabled in pairs(backup.particles) do
+            if inst and inst.Parent then pcall(function() inst.Enabled = wasEnabled end) end
+        end
+
+        self._antiLagBackup = nil
     end
+end
+
+function Utils:IsAntiLagActive()
+    return self._antiLagBackup ~= nil
 end
 
 function Utils:StopAll()
     for _, c in pairs(self._connections) do c:Disconnect() end
     self._connections = {}
+    if self._antiLagBackup then self:ToggleAntiLag(false) end -- devolve o visual original ao fechar o hub
 end
 
 return Utils

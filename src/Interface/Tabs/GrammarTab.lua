@@ -49,6 +49,7 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     local currentText = ""
     local correctedText = nil
+    local correcting = false
 
     Corretor:Input({
         Flag = "GramText", Title = "Texto",
@@ -59,12 +60,15 @@ function Tab:Render(WindowTab, Hub, Config, State)
     })
 
     Corretor:Button({ Title = "CORRIGIR", Icon = "spell-check", Callback = function()
+        if correcting then return end
         if currentText == "" then
             WindUI:Notify({Title="Gramática", Content="Escreve algum texto primeiro.", Duration=3})
             return
         end
+        correcting = true
         Status:SetDesc("Corrigindo...")
         Mod:CorrectText(currentText, Cfg, function(ok, result)
+            correcting = false
             if ok then
                 correctedText = result
                 Status:SetDesc("✅ " .. result)

@@ -26,13 +26,21 @@ function Tab:Render(WindowTab, Hub, Config, State)
         Callback = function(v) WindUI:SetTheme(v); Config.UITheme = v end
     })
 
-    local Servidor = WindowTab:Section({ Title = "Ferramentas do Servidor", Desc = "Ações para reconectar e estabilizar.", Icon = "server", Opened = false })
+    local Servidor = WindowTab:Section({ Title = "Servidor", Desc = "Ações para reconectar e estabilizar.", Icon = "server", Opened = false })
 
-    Servidor:Button({ Title = "FPS BOOST (Anti-Lag)", Desc = "Remove texturas do mapa para melhorar FPS.", Icon = "zap", Callback = function() Utils:AntiLag() end })
     Servidor:Button({ Title = "REJOIN", Desc = "Entra novamente neste mesmo servidor.", Icon = "rotate-cw", Callback = function() Utils:Rejoin() end })
     Servidor:Button({ Title = "SERVER HOP", Desc = "Busca e entra em um servidor mais vazio.", Icon = "globe", Callback = function() Utils:ServerHop() end })
     Servidor:Toggle({ Flag = "AutoRejoinE", Title = "Auto-Rejoin (Crash/Kick)", Desc = "Volta ao jogo se for desconectado.", Value = Config.AutoRejoin or false, Callback = function(v) Config.AutoRejoin = v end })
-    Servidor:Toggle({ Flag = "AntiAFKE", Title = "Anti-AFK", Desc = "Evita ser kickado por inatividade.", Icon = "user-check", Value = Config.AntiAFK ~= false, Callback = function(v) Config.AntiAFK = v; Utils:ToggleAntiAFK(v) end })
+
+    local Utilidades = WindowTab:Section({ Title = "Utilidades", Desc = "Ajustes que não mexem com o servidor.", Icon = "wrench", Opened = false })
+
+    Utilidades:Toggle({
+        Flag = "AntiLagE", Title = "Anti-Lag", Icon = "zap",
+        Desc = "Simplifica materiais, texturas, partículas e sombras do mapa inteiro pra ganhar FPS — reversível, desligar devolve tudo como estava.",
+        Value = Utils:IsAntiLagActive(),
+        Callback = function(v) Utils:ToggleAntiLag(v) end,
+    })
+    Utilidades:Toggle({ Flag = "AntiAFKE", Title = "Anti-AFK", Desc = "Evita ser kickado por inatividade.", Icon = "user-check", Value = Config.AntiAFK ~= false, Callback = function(v) Config.AntiAFK = v; Utils:ToggleAntiAFK(v) end })
 
     local Comunidade = WindowTab:Section({ Title = "Comunidade", Desc = "Fique por dentro das atualizações.", Icon = "users", Opened = false })
 

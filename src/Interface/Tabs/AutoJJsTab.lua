@@ -1,9 +1,29 @@
 local Tab = {}
 
+-- Validação antes de iniciar: números inválidos ou um intervalo absurdo
+-- (ex: milhões de mensagens) não travam o hub, mas também não deviam
+-- silenciosamente "funcionar do jeito errado" — bloqueia com um aviso.
+local function ValidateRange(Cfg)
+    local inicial = tonumber(Cfg.Inicial)
+    local final = tonumber(Cfg.Final)
+    if not inicial or not final then
+        return false, "Inicial e Final precisam ser números válidos."
+    end
+    if inicial < -1000000 or inicial > 1000000 or final < -1000000 or final > 1000000 then
+        return false, "Inicial/Final fora de um intervalo razoável (-1.000.000 a 1.000.000)."
+    end
+    local total = math.floor(math.abs(final - inicial)) + 1
+    if total > 100000 then
+        return false, string.format("Isso manda %d mensagens — reduz o intervalo (máximo 100.000).", total)
+    end
+    return true
+end
+
 function Tab:Render(WindowTab, Hub, Config, State)
     local Mod = Hub.Features.AutoJJs
     Config.AutoJJs = Config.AutoJJs or {}
     local Cfg = Config.AutoJJs
+    local WindUI = Hub.UI.Library
 
     if not Mod then
         WindowTab:Section({ Title = "⚠️ Auto JJ's indisponível", Desc = "O módulo falhou ao carregar nessa sessão. Veja o Diagnóstico na aba Sistema ou o console (F9).", Icon = "alert-triangle" })
@@ -24,14 +44,15 @@ function Tab:Render(WindowTab, Hub, Config, State)
         Desc = "Ativa ou desativa a execução automática da contagem no chat.",
         Value = State.IsRunning == true,
         Callback = function(v)
+            if not State.IsRunning then
+                local ok, err = ValidateRange(Cfg)
+                if not ok then
+                    if WindUI then WindUI:Notify({Title="Auto JJ's", Content=err, Duration=5}) end
+                    return
+                end
+            end
             Mod:Toggle(Config, State, Hub, function(t) Status:SetDesc(t) end)
         end,
-    })
-
-    Essenciais:Dropdown({
-        Flag = "JJsModo", Title = "Modo", Desc = "Formato e regra da contagem enviada.",
-        Values = { "Padrão" }, Value = Cfg.Modo or "Padrão",
-        Callback = function(v) Cfg.Modo = v end,
     })
 
     Essenciais:Input({ Flag = "JJsInicial", Title = "Inicial", Desc = "Número de início da contagem.", Value = tostring(Cfg.Inicial or 1), Callback = function(v) Cfg.Inicial = tonumber(v) or 1 end })

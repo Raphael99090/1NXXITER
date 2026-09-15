@@ -189,7 +189,7 @@ if Hub.Core.Lifecycle then
     if Hub.Features.ESP then L:SetActiveGetter("ESP", function() return Hub.Features.ESP.Settings.Enabled end) end
     if Hub.Features.FreeCam then L:SetActiveGetter("FreeCam", function() return Hub.Features.FreeCam.Settings.Enabled end) end
     if Hub.Features.SpyChat then L:SetActiveGetter("SpyChat", function() return Hub.Features.SpyChat.Enabled end) end
-    if Hub.Features.Visuals then L:SetActiveGetter("Visuals", function() return Hub.Features.Visuals.Settings.StretchedEnabled end) end
+    if Hub.Features.Visuals then L:SetActiveGetter("Visuals", function() return Hub.Features.Visuals.Settings.CustomFOVEnabled end) end
     if Hub.Features.TASRecorder then
         L:SetActiveGetter("TASRecorder", function()
             local t = Hub.Features.TASRecorder
@@ -253,6 +253,8 @@ function Hub:ApplyConfig()
         esp.Settings.Tracers = e.Tracers == true
         esp.Settings.Distance = e.Distance == true
         esp:Toggle(e.Enabled == true)
+        esp:ToggleTracers(esp.Settings.Tracers) -- Tracers/Distância são independentes do Chams, precisam da própria conexão ligada no boot
+        esp:ToggleDistance(esp.Settings.Distance)
     end
 
     local move = self.Features.PlayerMods
@@ -273,7 +275,7 @@ function Hub:ApplyConfig()
     if visuals then
         local cam = c.Camera or {}
         visuals.Settings.FOVValue = cam.FOVValue or 70
-        visuals:ToggleStretched(cam.StretchedEnabled == true)
+        visuals:ToggleCustomFOV(cam.CustomFOVEnabled == true)
     end
 
     local freecam = self.Features.FreeCam

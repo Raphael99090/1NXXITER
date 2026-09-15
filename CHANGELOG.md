@@ -2,182 +2,28 @@
 
 Todas as mudanças notáveis do 1NXITER HUB são documentadas aqui.
 
-## [3.10.0] - 2026-09-09
+## [4.0.0] - 2026-09-13
 
-### Adicionado
-- **Aba Gramática**: campo de texto + 3 botões (Corrigir, Copiar, Enviar no Chat). "Corrigir" chama a API do Gemini (`generateContent`) usando a API Key do usuário (salva localmente, configurável na seção Configuração), com modelo escolhível por dropdown (`gemini-3.1-flash-lite` / `gemini-2.5-flash-lite`) ou campo de modelo customizado (texto livre, tem prioridade — o Google renomeia modelos com frequência, então isso evita depender só das opções fixas ficarem certas pra sempre). "Copiar" e "Enviar no Chat" usam o resultado corrigido quando disponível, senão o texto original digitado.
-- Novo módulo `Features/Grammar.lua` (detecta `http_request`/`request`/`syn.request` do executor pra fazer o POST externo — `game:HttpGet` só faz GET) + `Interface/Tabs/GrammarTab.lua`, registrados no Lifecycle Manager.
-- **Limitação conhecida**: o campo de texto da WindUI é de uma linha só — não confirmei um modo "Multiline" na documentação oficial. Texto longo funciona (o Gemini recebe a string inteira), só não quebra linha visualmente no campo.
+Reinício do versionamento. Resumo do estado atual do projeto após a limpeza:
 
-## [3.9.0] - 2026-09-09
+### Núcleo
+- Lifecycle Manager (`Core/Lifecycle.lua`): rastreia o carregamento de cada módulo (DISCOVER → LOAD → VALIDATE → RUNNING/FAILED), isola falhas sem derrubar o Hub inteiro, expõe diagnóstico na aba Sistema.
+- Key System via WindUI nativo (`pandadevelopment`), com key salva localmente após a primeira validação.
+- `Config` persistido em JSON local, aninhado por Feature, com merge automático contra os padrões em atualizações.
 
-### Corrigido/Alterado (Sections viram categorias de verdade, minimizáveis)
-- Descoberto na doc oficial da WindUI: `Section` é um CONTÊINER de verdade (`Section:Toggle()`, `Section:Button()`, etc.), com `Opened = true/false` controlando se começa aberta ou fechada — não só um título decorativo. O projeto inteiro usava `Section` só como divisor visual, sem aninhar nada dentro, então nenhuma categoria minimizava de verdade. Corrigido em **todas as abas**: todo elemento agora é filho da Section correta, e cada categoria pode ser fechada/aberta independente.
-- De quebra, corrigidos dois lugares sem guarda de `nil`: `MovementTab.lua` (Feature `PlayerMods` podia não existir) e `ShortcutsTab.lua` (`Hub.Features.Aimbot.Settings.AimKey` acessado sem checar se o Aimbot carregou).
+### Features
+- **Aimbot** — Silent Aim, prioridade de alvo, checagem de parede, parte-alvo configurável.
+- **ESP** — Chams, Tracers e Distância, cada um com conexão independente dos outros.
+- **PlayerMods** — velocidade, pulo, Noclip, pulo infinito, voo livre (com orientação automática na direção do voo), Anti-Void.
+- **Visuals** — FOV customizado com restauração do valor original do jogo ao desligar.
+- **FreeCam** — câmera orbital livre.
+- **SpyChat** — aba própria, independente da Câmera.
+- **AutoJJs** — contagem automática no chat, 3 modos de intervalo mutuamente exclusivos, sufixo customizável, modo reverso, validação de intervalo antes de iniciar.
+- **TASRecorder** — grava trajeto a ~60x/s, fantasma marcador estático no ponto inicial (pose fiel capturada no instante da gravação), reprodução via CFrame determinístico (sem física) com o próprio jogador assumindo o trajeto, rota visual e progresso de tempo/distância.
+- **Grammar** — correção de texto via API do Gemini, key própria do usuário.
+- **Utils** — Anti-Lag reversível (restaura os valores originais ao desligar), Anti-AFK, Auto-Rejoin, Server Hop.
 
-## [3.8.0] - 2026-09-09
-
-### Alterado (renomeado AutoTrain → Auto JJ's, reconstrução completa)
-- **`Features/AutoTrain.lua` → `Features/AutoJJs.lua`**, **`Interface/Tabs/TrainTab.lua` → `Interface/Tabs/AutoJJsTab.lua`**. Removido de vez o sistema de 3 modos de exercício (Canguru com giro 360º, Flexão, Polichinelo) — virou um recurso só, focado em contagem no chat.
-- **Essenciais**: toggle único pra ligar/desligar (era botão antes), "Inicial"/"Final" no lugar de "StartNum"/"Quantity", "Pular" (toggle simples — o avatar pula a cada número, sem o giro/agachamento antigo).
-- **Formatação de Texto**: sufixo predefinido (`!`, `.`, `,`, `?`, Nenhum) ou customizado (texto livre, tem prioridade sobre o predefinido), com "Espaçamento" opcional entre número e sufixo.
-- **Intervalo — 3 modos mutuamente exclusivos** (só um ativo por vez, guardado em `Config.AutoJJs.IntervalMode`): Inteligente (calcula o delay pra bater um tempo total exato), Fixo (delay constante) e Dinâmico (aleatório entre mínimo/máximo, pra parecer digitação humana).
-- **Extras**: Modo reverso — inverte a contagem, começa no "Final" e desce até o "Inicial".
-- `Config` do recurso migrou de campos soltos (`Config.Mode`, `Config.StartNum`, etc.) pra `Config.AutoJJs.*` aninhado, junto com o padrão que Aimbot/ESP/Movement/Camera/SpyChat/TAS já usavam — os campos antigos foram removidos do `DefaultConfig` em `State.lua`.
-
-## [3.7.4] - 2026-09-09
-
-### Corrigido
-- **Personagem "flutuava" depois de pular e a animação de andar continuava parado**: efeito colateral do fix anterior — ao forçar `ChangeState(Jumping/Freefall)`, o Humanoid nunca voltava sozinho pra "Running" depois (a raiz tá `Anchored`, o motor não detecta aterrissagem por conta própria). Ficava preso no estado aéreo pra sempre: a animação de queda nunca saía (parecia flutuar) e o `WalkSpeed` parava de ter efeito, porque o Animate do jogo só reage a mudanças de `WalkSpeed` enquanto o Humanoid está em "Running". Agora, ao sair de um trecho de pulo/queda gravado, o replay força `ChangeState(Running)` de volta.
-
-## [3.7.3] - 2026-09-09
-
-### Corrigido
-- **Replay parecia "voar" em vez de pular/virar rápido**: gravava só ~6-7 pontos por segundo (`RECORD_INTERVAL = 0.15`). Pulo é uma curva e giros rápidos de câmera/direção são mudanças bruscas — interpolando linearmente entre pontos tão espaçados, o resultado virava uma reta "flutuando" de um ponto a outro em vez de seguir a trajetória real. Pesquisei como replays de Roblox costumam gravar (perto da taxa real do jogo, ~60x/s) e apliquei isso: `RECORD_INTERVAL` agora é `0` — grava em todo `Heartbeat`. Com pontos tão próximos, a reta entre eles já aproxima bem qualquer curva, incluindo o arco do pulo. Custo: arquivo `.tas` fica maior (na faixa de ~1MB por minuto gravado).
-- `GetRecordingInfo()` calculava os segundos como `pontos × intervalo fixo` — com intervalo 0 isso sempre dava zero. Agora usa o timestamp real do último ponto gravado.
-
-## [3.7.2] - 2026-09-09
-
-### Corrigido
-- **Animação de andar tocando parado durante o replay**: o replay forçava `Humanoid:ChangeState(Running)` sempre que o estado gravado era "Running" — só que esse estado significa só "no chão", não distingue parado de andando (Roblox não tem um `HumanoidStateType.Idle` separado). O script de animação do próprio jogo decide walk/run/idle olhando o `WalkSpeed`/velocidade, não o CFrame que a gente seta direto. Agora, a cada frame, calcula a velocidade REAL do trecho gravado (`distância do segmento / tempo do segmento`) e reflete isso no `Humanoid.WalkSpeed` — o Animate do próprio jogo escolhe a animação certa sozinho a partir disso, sem a gente precisar adivinhar. `WalkSpeed` original é salvo e restaurado em `ReleaseControl()`.
-
-## [3.7.1] - 2026-09-09
-
-### Corrigido
-- **Pulo ainda não funcionava** mesmo depois do fix anterior (colapsar o trecho aéreo num MoveTo pro pouso) — o problema de raiz era depender de `Humanoid:MoveTo`/física de qualquer jeito: o `Humanoid.Jump` só pega se o personagem estiver exatamente no estado certo no frame certo, e isso não é garantido. **Trocado o modo de reprodução inteiro**: agora a raiz do personagem fica `Anchored` durante o replay e o `CFrame` gravado é reproduzido direto, frame a frame, interpolado (`CFrame:Lerp`) com base no tempo real decorrido — igual ao motor determinístico que já existia pro fantasma antes de virar estático. A trajetória (altura do pulo incluída) fica sempre idêntica ao que foi gravado, porque não depende de física nenhuma pra funcionar. Animação de pulo/queda/corrida é só cosmética agora (`Humanoid:ChangeState`, não afeta a posição).
-
-## [3.7.0] - 2026-09-09
-
-### Alterado (organização)
-- **Spy Chat ganhou aba própria**, saiu de dentro da "Câmera" (não tinha nada a ver com câmera). Config migra sozinha na primeira carga (`Config.Camera.SpyChatEnabled` antigo → `Config.SpyChat.Enabled`, sem resetar quem já tinha ligado).
-- **`Interface/Main.lua` virou `Interface/Window.lua`** — o projeto tinha `src/main.lua` e `src/Interface/Main.lua` com o mesmo nome, ambíguo na hora de falar "mexe no main". `Hub.UI.Main` (o módulo carregado) virou `Hub.UI.Interface`, pra não colidir com `Hub.UI.Window` (a instância da janela que os `Dialog()` já usavam).
-
-## [3.6.2] - 2026-09-09
-
-### Adicionado
-- **Pose inicial fiel do fantasma (R6)**: aproveitada uma técnica de scripts TAS antigos encontrados pelo Rapzin (gravar o CFrame de cada parte do corpo, não só a raiz). No instante em que "Iniciar Gravação" é clicado, captura o CFrame de Head/Torso/Left Arm/Right Arm/Left Leg/Right Leg (`data.startPose`, uma vez só, não todo frame). Ao preparar o fantasma, planta essa pose exata nas partes correspondentes — em vez da pose genérica que o clone puxa do personagem no momento em que ele é preparado, agora ele fica congelado exatamente como você estava no instante em que começou a gravar (ex: no meio de um passo, braço balançando). Escopo deliberadamente só R6 e só a pose estática — o fantasma continua sem andar/animar o percurso.
-
-## [3.6.1] - 2026-09-09
-
-### Corrigido
-- **Pulo não funcionava no replay**: `Humanoid:MoveTo` mirava cada ponto gravado, inclusive os que estavam no ar — a gravidade sempre puxava o personagem de volta antes de chegar lá, então o pulo nunca acontecia de verdade. Agora, ao entrar num trecho gravado como "Jumping"/"Freefall", o replay dispara `Humanoid.Jump` uma vez só e mira o `MoveTo` direto no ponto de POUSO (o primeiro waypoint depois que volta a andar) — a física cuida da altura, o `MoveTo` só carrega o impulso horizontal até o lugar certo.
-- `TASTab.lua`: botão "Preparar Fantasma" removido — selecionar uma gravação na lista já prepara o fantasma automaticamente.
-
-## [3.6.0] - 2026-09-09
-
-### Alterado (reversão de arquitetura em `Features/TASRecorder.lua`)
-- **O fantasma voltou a ser só um marcador parado** — não anda, não anima, não é mais um "ator" clonado em movimento. É o clone semitransparente do personagem, parado exatamente no ponto onde a gravação começou.
-- **É o SEU personagem quem faz o caminho agora**, não o fantasma. Ao disparar o replay, o jogador é teleportado pra posição inicial gravada e o script guia o `Humanoid:MoveTo` waypoint por waypoint (física real, respeita colisão, pulos via `Humanoid.Jump` nos pontos marcados como salto na gravação).
-- **Câmera voltou ao normal** — não é mais sequestrada (`Scriptable`) nem reproduz a gravação. Segue o jogador como sempre, já que é ele quem anda.
-- **Gatilho trocado de `Touched` pra proximidade**: em vez de depender do evento de toque físico (que com `CanCollide=false` pode não disparar igual em todo executor), agora é um `Heartbeat` medindo distância — "estar dentro" do fantasma (raio de ~3.5 studs) com "Ativar Reproduzir" ligado dispara o replay.
-- Removido: interpolação `CFrame:Lerp` do fantasma, carregamento de animações (`Animator`/`LoadAnimation`), sequestro de câmera. A suspensão de Aimbot/FreeCam durante o replay (`SetHub`) continua, já que os dois ainda podem interferir na câmera/controle do jogador real durante o replay.
-- Rota visual e label de tempo/distância continuam, mas o label agora acompanha o JOGADOR durante o replay (progresso ao vivo) em vez do fantasma parado (que ganhou um label estático só com o total gravado).
-- API pública 100% preservada de novo — `TASTab.lua` não mudou.
-
-## [3.5.0] - 2026-09-09
-
-### Adicionado
-- **TAS suspende Aimbot (Silent Aim) e FreeCam durante o replay**: os três brigavam pelo `workspace.CurrentCamera` (todos fazem `CameraType = Scriptable`). Agora `TASRecorder:SetHub(Hub)` é chamado uma vez em `main.lua` logo depois das Features carregarem; no início do replay, se Aimbot/FreeCam estiverem ligados, são desligados temporariamente e restaurados no fim (natural ou manual) — é a primeira dependência real entre duas Features do projeto, mas opcional por natureza (sem `SetHub`, TAS continua funcionando sozinho).
-- **Tela de Key personalizada**: `Note`, `URL` (link direto pro GetKey do Panda), `Thumbnail` (reaproveita o ícone já usado no topo da janela) e `Title`/`Desc`/`Icon` no provedor Panda Auth, em vez do formulário genérico padrão da lib. Fundo da janela ganhou um gradiente escuro-pra-ciano sutil (`WindUI:Gradient`, com fallback silencioso pro tema padrão se a versão da lib não suportar).
-
-## [3.4.2] - 2026-09-09
-
-### Corrigido
-- `docs/index.html`: os 3 links "Pegar minha key" apontavam pra `getkey/`, uma página que nunca existiu no repo (resquício de antes da migração pro Panda). Agora apontam direto pra `https://ads.pandauth.com/getkey/1nxxiter`.
-- `TASRecorder.lua`: guardas contra gravar e reproduzir ao mesmo tempo — `StartRecording()` recusa se um replay estiver ativo, `PlayRecording()` recusa se uma gravação estiver em andamento.
-
-## [3.4.1] - 2026-09-09
-
-### Corrigido (`Features/TASRecorder.lua`)
-- **Clone falhando silenciosamente**: `char:Clone()` podia devolver `nil` sem erro nenhum quando `Archivable` do personagem vinha `false` (padrão em vários jogos). `PrepareGhost` agora liga `Archivable = true` só pro clone e restaura o valor original logo depois, sempre — mesmo se a clonagem falhar.
-- **Softlock em morte/respawn**: se o jogador morresse ou desse reset com o replay ativo, a câmera ficava travada em `Scriptable` e o controle desabilitado apontando pra um `Humanoid`/`PlayerModule` de um personagem que não existe mais — sem forma de recuperar sem re-executar o hub. Novo listener em `LocalPlayer.CharacterRemoving` chama `StopPlayback()` automaticamente nesse caso.
-- **Fim do replay travava o jogador**: alcançar o último frame só desconectava o loop e deixava a câmera/controle presos até alguém clicar manualmente em "Parar reprodução" (era proposital antes, mas causava exatamente o tipo de travamento que o fix acima existe pra evitar). Agora o fim natural do replay já devolve câmera (`Custom`) e controle (`PlayerModule:GetControls():Enable()`) na hora — o fantasma continua parado e visível no último frame, só o jogador não fica preso esperando.
-- Lógica de "devolver câmera + controle" extraída pra uma função só (`ReleaseControl`), reaproveitada tanto na parada manual quanto no fim natural — evita duplicar a mesma lógica em dois lugares.
-
-## [3.4.0] - 2026-09-09
-
-### Corrigido (reescrita completa de `Features/TASRecorder.lua`)
-- **A causa raiz de tudo**: o replay nunca movia o fantasma — ele ficava parado no ponto inicial enquanto o SEU personagem era teleportado via `Humanoid:MoveTo` por waypoint. Isso explicava a falta de câmera, rota, animação e info visual: nada disso fazia sentido reproduzir no jogador real. Agora o fantasma é quem executa o replay inteiro; o jogador só fica com a câmera presa assistindo.
-- **Fantasma real desde o início**: clone completo do personagem (partes, proporções, tudo — sem fallback de bloco/Part), já posicionado exatamente no 1º frame gravado assim que "Preparar Fantasma" é clicado, não só quando o replay começa.
-- **Câmera gravada, sem toggle**: `cc` (CFrame da câmera) é gravado em todo frame junto com a posição do personagem — não existe opção pra desligar isso. Durante o replay a câmera vira `Scriptable` e reproduz a trajetória gravada por interpolação (`CFrame:Lerp`), incluindo rotação.
-- **Movimento determinístico, sem física**: trocado `Humanoid:MoveTo` (físico, não-determinístico, podia empacar em obstáculo) por interpolação direta de `CFrame` entre frames consecutivos com base no tempo real decorrido. Anda/corre/pula/cai com animação real tocada manualmente via `Animator`, usando os IDs de animação do PRÓPRIO jogo (lidos do script `Animate` do personagem real) quando disponíveis.
-- **Loop removido de vez**: o índice do frame (`segIndex`) só avança, nunca reseta; ao alcançar o último frame o `RunService.Heartbeat` é desconectado e o fantasma/câmera ficam congelados no estado final até "Parar reprodução" ser clicado. Nenhuma operação `% total` ou wrap-around em lugar nenhum.
-- **Rota visual**: liga os pontos gravados em ordem (funciona em qualquer sentido do percurso) com segmentos `Part` finos em Neon, pulando só trechos onde o jogador ficou parado (evita segmento de comprimento zero) — sem recalcular a rota.
-- **Info acima do fantasma**: `BillboardGui` com tempo decorrido e distância real percorrida (soma dos deslocamentos entre frames, pré-calculada uma vez, não linha reta início→fim).
-- **Cleanup**: `RemoveGhost()` sempre chama `StopPlayback()` primeiro (nunca deixa câmera/controle presos); preparar um novo fantasma remove o anterior por completo (nunca sobrepõe); `Unload()` limpa tudo.
-- **API pública 100% preservada** — `TASTab.lua` não precisou de nenhuma mudança.
-
-## [3.3.0] - 2026-09-09
-
-### Adicionado
-- **Aba TAS**: grava seu trajeto (posição a cada 0.15s + marcação de pulo), salva em `.tas` (JSON) na pasta `1NXITER_HUB/TAS`. Ao "preparar" uma gravação, spawna um clone semitransparente do seu personagem parado no ponto inicial; com "Ativar Reproduzir" ligado, **entrar dentro do fantasma** (toque real, não só proximidade) dispara o replay. O replay usa `Humanoid:MoveTo` por waypoint (movimento simulado, com física — sujeito a colisão), trava o controle (WASD) do jogador até terminar ou até "Parar reprodução" ser clicado, e sempre devolve o controle no `Unload()` mesmo se o hub for fechado no meio de uma reprodução.
-- Novo módulo `Features/TASRecorder.lua` + aba `Interface/Tabs/TASTab.lua`, registrados no Lifecycle Manager.
-
-## [3.2.0] - 2026-09-09
-
-### Alterado
-- **Key System migrado pro nativo da WindUI**: as ~220 linhas de `main.lua` que faziam HWID manual, fetch da lib PUSL V4 do Panda e montavam uma janela de key na mão viraram só um parâmetro `KeySystem` (`Type = "pandadevelopment"`) dentro do `CreateWindow` do `Interface/Main.lua`. Sem `Secret` exposto no client — pandadevelopment só pede `ServiceId`, que já é público (aparece na URL do GetKey). Ganho de brinde: `SaveKey = true`, então a key validada fica salva localmente e não precisa ser colada de novo toda sessão. **Não testado no executor ainda** — o comportamento exato do gate nativo (se trava a janela até validar, etc.) precisa ser confirmado na prática antes de considerar isso pronto pra valer.
-- Como consequência, os módulos agora são baixados do GitHub antes da key ser validada (antes, `RequestKey()` só chamava `LoadHub()` depois da key certa). Não pesa pra um hub pessoal, mas é uma mudança de comportamento real.
-- Botões **RESTAURAR PADRÕES DE FÁBRICA** e **FECHAR HUB TOTALMENTE** agora pedem confirmação via `Window:Dialog()` nativo antes de executar, em vez de disparar na hora.
-
-## [3.1.0] - 2026-09-09
-
-### Corrigido
-- **Bug crítico de persistência**: `CombatTab`, `ESPTab`, `MovementTab` e `CameraTab` faziam `local Cfg = Config.Aimbot or {}` (e equivalentes pra ESP/Movement/Camera). Como essas chaves nunca existiam no `DefaultConfig`, `Cfg` virava uma tabela nova e órfã — nunca escrita de volta em `Config`. Os toggles/sliders funcionavam na hora (porque também setavam `Feature.Settings.X` direto), mas **nada disso era salvo no JSON**, nem pelo auto-save nem pelo botão manual. Ao reabrir o hub, Combate/Visual/Movimento/Câmera sempre voltavam pro padrão — só Treino, Sistema e Atalhos persistiam de verdade. Corrigido nos 4 arquivos com `Config.X = Config.X or {}` antes de guardar a referência.
-- **OverviewTab**: usava `State.LoadedAtTick`, que nunca existiu em `State.lua` — sempre caía no fallback `os.clock()`, fazendo o "Tempo de Uso" recomeçar do render da aba em vez do load real do hub. Adicionado `LoadedAtTick` em `RuntimeState`.
-
-### Adicionado
-- **Anti-AFK virou toggle de verdade** na aba Sistema (`Config.AntiAFK`, default ligado) — antes rodava sempre, sem controle na UI nem persistência. `Utils:AntiAFK()` virou `Utils:ToggleAntiAFK(state)`.
-- **Parte-alvo do Aimbot** selecionável (HumanoidRootPart / Head / UpperTorso) — dropdown novo na aba Combate, ligado em `Aimbot.Settings.TargetPart`.
-- **Fly encara a direção do voo**: o personagem agora gira pra apontar pra onde tá voando (like avião, incluindo inclinação de subida/descida) em vez de ficar travado olhando pro nada enquanto `PlatformStand` desliga o auto-rotate do Humanoid. Não é opcional — é comportamento padrão do Fly, sempre ativo.
-
-### Removido
-- **`dist/` e `tools/minify.py`**: o bundle minificado (`release.lua`, `release_bug.lua`, `1nxiter.min.lua`) e o script que o gerava foram removidos — o loadstring público sempre apontou direto pro `src/main.lua` (ver README), então o bundle era peso morto que ninguém mantinha atualizado.
-
-## [3.0.0] - 2026-09-07
-
-### Segurança
-- **Keys premium não ficam mais em texto puro no `keys.json`**: como esse arquivo é público (GitHub raw/Pages), guardar a key crua como índice do JSON deixava qualquer um que abrisse a página ler a lista inteira de keys vendidas e usá-las de graça. Agora só o **hash SHA-256** da key fica salvo — implementado um SHA-256 puro em Lua no `main.lua` (sem libs externas, já que o loader roda antes do sistema de módulos existir) e via Web Crypto (`crypto.subtle.digest`) no painel admin, os dois batendo o mesmo hash. Rodei os dois contra vetores de teste oficiais do SHA-256 antes de subir. O painel admin agora deixa claro que a key só aparece na hora da criação — depois só o hash fica recuperável.
-
-### Alterado
-- **UI trocada de Fluent pra WindUI**: mesma estrutura de abas e funcionalidades, mas o botão flutuante de mobile agora é o `OpenButton` nativo da WindUI (arrastável) — o hack de ~250 linhas que existia em `Interface/Main.lua` pra simular isso em cima da Fluent (bolinha customizada, hook em `Window.Minimize`, `VirtualInputManager` simulando tecla) foi todo removido. Tema agora troca em runtime de verdade via `WindUI:SetTheme` (dropdown nativo na aba Sistema), sem precisar do addon `InterfaceManager` que a Fluent exigia pra isso.
-
-### Adicionado
-- **Modo de teste temporário** no sistema de key: `TESTING_MODE = true` em `main.lua` faz a key `"TESTE-1NX"` liberar o hub sem bater no site (útil enquanto `VALIDATE_URL` ainda é o placeholder). Imprime um aviso no console (F9) lembrando que tá ativo. **⚠️ Mude pra `false` antes de publicar** — com isso ligado, qualquer um que descubra a key de teste entra de graça.
-- **Combate**: prioridade de alvo (mais perto da mira / menor vida), "Só mirar segurando E" (aim key), "Ignorar Time" e "Mostrar Círculo do FOV" — todas já existiam como `Settings` mortos, sem controle na UI.
-- **Movimento**: **Fly** de verdade (voo 3D via BodyVelocity — WASD/joystick pra direção, Espaço/Ctrl pra subir/descer, botão de pulo dá um empurrão no touch sem teclado) e **Anti-Queda** (teleporta de volta pra última posição segura se cair do mapa).
-- **Visual**: Tracers (linha até o jogador) e texto de Distância, como extras opt-in em cima do Chams minimalista.
-- **Sistema de key real, ligado ao site**: `main.lua` agora chama `POST /api/validate` do site (`1nxiter-site`) em vez de comparar com uma key fixa — envia `key` + `hwid` (via `gethwid`/`get_hwid`/`identifyexecutor`, com fallback pro `RbxAnalyticsService`), mostra "Verificando..." durante a checagem, trava contra clique duplo, e traduz cada `reason` do servidor (`key_invalid`, `expired`, `revoked`, `hwid_mismatch`, `rate_limited`) numa mensagem amigável. **Antes de publicar**, troque `VALIDATE_URL` em `main.lua` pelo domínio real do site (com HTTPS).
-- **Silent Aim**: novo toggle no Aimbot — trava o alvo (`Aimbot.LockedTarget`) e mostra um marcador triangular na tela, mas **nunca gira a câmera sozinha**. Não existe hook de disparo genérico pra redirecionar tiro nesse jogo, então isso é o modo "mira sem se mexer": serve pra você mirar em cima da marcação sem ninguém perceber a câmera travando — não atira sozinho.
-- Auto-save de verdade: `Config.AutoSave` existia desde sempre mas nada lia esse valor — agora `StateManager:StartAutoSave` roda em segundo plano e salva sozinho quando algo muda (a cada ~8s), respeitando a flag.
-- Botão "RESTAURAR PADRÕES" na aba Sistema (`StateManager:ResetConfig`), com aviso de que é preciso reabrir o hub pra ver os controles atualizados.
-- Status ao vivo "🎯 Mirando em alvo" / "🔒 Alvo travado (Silent Aim)" / "👀 Procurando alvo..." na aba Combate.
-- Contador ao vivo de jogadores detectados na aba Visual (atualiza a cada segundo enquanto o ESP está ligado).
-- Toggle de Jump Power (Ativar + slider de força) na aba Movimento — `PlayerMods.Settings.JumpEnabled/JumpValue` já existiam no código mas não tinham nenhum controle na UI.
-- Toggle de Auto-Rejoin na aba Sistema — `Config.AutoRejoin` já era lido por `Utils:AutoRejoin`, mas não dava pra ligar sem editar o JSON na mão.
-
-### Alterado
-- **ESP totalmente reescrito**: saiu Box/Skeleton/HealthBar (baseados em Drawing, mais pesados e mais código) e entrou só **Chams** (Highlight que atravessa parede) — minimalista, um toggle + ocultar aliados + slider de transparência. Também passou a reagir a respawn (`CharacterAdded`) automaticamente, o que o Aura antigo não fazia sozinho.
-- Sistema de key fixa (`main.lua`) antes de carregar qualquer módulo — tela de input com validação e mensagem de erro. **Apenas para teste**: a key fica em texto puro no código, sem segurança real ainda.
-- Ícone customizado na bolinha flutuante, baixado do repositório (`Assets/1784776415112.png`) via `writefile`/`getcustomasset`, com fallback pro texto "1NX" caso o executor não suporte.
-- `UIAspectRatioConstraint` na bolinha flutuante, pra ela nunca esticar/virar elipse em resoluções diferentes.
-- Sombra suave (drop-shadow) atrás da bolinha flutuante.
-- Efeito de glow pulsante no contorno da bolinha enquanto o hub está minimizado.
-- Snap automático pra borda esquerda/direita da tela ao soltar o drag da bolinha, com clamp vertical pra nunca sair da viewport.
-- Fade-in suave do ícone customizado quando termina de carregar, e fade-out do texto de fallback.
-
-### Corrigido
-- **FreeCam**: conexão de `UserInputService.TouchEnded` não era guardada — cada vez que a FreeCam era ligada, uma nova conexão global era empilhada por cima das anteriores sem nunca desconectar (vazamento a cada toggle). Agora é guardada e desconectada junto com as outras.
-- **FreeCam**: rotação vertical (pitch) não tinha limite — dava pra passar da vertical e virar a câmera de cabeça pra baixo. Agora é limitada a ±89°.
-- **SpyChat**: `MakeDraggable` conectava direto em `UserInputService.InputChanged` sem devolver/guardar a conexão — toda vez que o painel era reaberto (Toggle true), a conexão antiga continuava viva. Agora as conexões do arraste são registradas em `self.Connections` e desconectadas junto com o resto ao fechar.
-- **AutoTrain**: não tinha `Unload()` — um treino em andamento sobrevivia ao "FECHAR HUB" e continuava mandando mensagem no chat pra sempre, sem UI pra pausar. `RuntimeState.IsActive` também nunca era setado como `false` em lugar nenhum, então a checagem de segurança que já existia no loop nunca disparava de verdade.
-- **ESP**: jogador que saía da partida com ESP ligado nunca tinha os Drawings (Box/Skeleton/HealthBar) removidos — ficavam órfãos em `ESP.Cache` até o ESP inteiro ser desligado. Agora limpa automaticamente em `Players.PlayerRemoving`.
-- **PlayerMods**: duas conexões separadas ao mesmo `CharacterAdded` foram unificadas em uma só, e a conexão de `DescendantAdded` do personagem anterior agora é desconectada a cada respawn em vez de empilhar uma nova a cada morte.
-- Bolinha flutuante não aparecia ao minimizar o hub — a detecção antiga tentava adivinhar qual `Frame` da Fluent era o principal e escutar `.Visible`, o que é frágil na v3 da Fluent (que anima minimize/restore sem necessariamente tocar em `.Visible`). Trocado por um hook direto em `Window:Minimize`, que cobre tanto o clique na bolinha quanto o `MinimizeKey` (LeftControl).
-- Clique na bolinha não restaurava a janela — a chamada `Window:Minimize(false)` estava tratando o parâmetro como "estado desejado", mas ele provavelmente é uma flag de animação/instant, não o estado alvo. Trocado por `Window:Minimize()` como toggle puro, igual o keybind interno já fazia.
-
-### Alterado
-- Paleta de cores da bolinha flutuante trocada de vermelho genérico pra roxo/dourado, combinando com a logo do hub.
-
-### Removido
-- Badge de atividade (pontinho verde indicando feature ativa em segundo plano) — implementado e depois removido a pedido, por não ser necessário no momento.
+### Interface
+- Todas as abas usam Sections como contêineres colapsáveis de verdade (não só título).
+- Diálogos de confirmação nativos em ações destrutivas (restaurar padrões, fechar hub).
+- Tela de key personalizada com branding do hub.

@@ -300,15 +300,19 @@ local function BuildCumulativeDistance(waypoints)
 end
 
 -- Linha da rota: conecta os pontos GRAVADOS na ordem em que foram
--- gravados (funciona igual pra qualquer sentido do percurso). Pula
--- pontos muito próximos (jogador parado) só pra não criar segmentos de
--- comprimento ~0 — não é uma rota "recalculada", continua passando
--- exatamente pelos pontos reais.
-local function CreateRoute(waypoints)
+-- gravados (funciona igual pra qualquer sentido do percurso). MIN_GAP é
+-- ADAPTATIVO — cobre a distância toda com no máximo ~300 segmentos, não
+-- importa quantos pontos foram gravados. Sem isso, gravando a 60x/s (ver
+-- RECORD_INTERVAL acima) uma gravação de 1 minuto podia gerar milhares
+-- de Parts na rota — exatamente o que "implementação eficiente" queria
+-- evitar desde o início. Continua passando pelos pontos reais, só não
+-- desenha segmento pra cada um se isso passar do limite.
+local function CreateRoute(waypoints, totalDistance)
     local folder = Instance.new("Folder")
     folder.Name = "InxiterTASRoute"
 
-    local MIN_GAP = 0.6
+    local MAX_SEGMENTS = 300
+    local MIN_GAP = math.max((totalDistance or 0) / MAX_SEGMENTS, 0.3)
     local lastPos = ComponentsToPosition(waypoints[1].cf)
 
     for i = 2, #waypoints do
@@ -455,7 +459,7 @@ function TASRecorder:PrepareGhost(name)
         GhostLabel = label
     end
 
-    RouteFolder = CreateRoute(data.waypoints)
+    RouteFolder = CreateRoute(data.waypoints, data.cumDist[#data.cumDist])
     RouteFolder.Parent = workspace
 
     GhostModel = ghost
@@ -600,10 +604,7 @@ function TASRecorder:PlayRecording(data)
             if progressLabel and progressLabel.Parent then
                 progressLabel.Text = string.format("%.1fs | %.1f studs (fim)", totalTime, totalDist)
             end
-            if PlayHeartbeatConn then PlayHeartbeatConn:Disconnect(); PlayHeartbeatConn = nil end
-            Playing = false
-            r.Anchored = false
-            ReleaseControl()
+            self:StopPlayback() -- já desconecta, destrava física e devolve controle
             return
         end
 
@@ -630,7 +631,19 @@ function TASRecorder:PlayRecording(data)
         -- Animate do jogo já sabe decidir idle/walk/run a partir disso,
         -- sem a gente precisar adivinhar.
         local segDist = (data.cumDist[segIndex + 1] or data.cumDist[segIndex]) - data.cumDist[segIndex]
-        h.WalkSpeed = segDist / span
+        local currentSt = a.st or "Running"
+
+        if not JUMP_STATES[currentSt] and currentSt ~= "Freefall" then
+            -- Só atualiza no chão — no ar, segDist inclui o deslocamento
+            -- vertical do pulo, que não representa velocidade de corrida
+            -- nenhuma e deixaria o WalkSpeed com valores sem sentido
+            -- enquanto o Jumping/Freefall já cuida da animação sozinho.
+            local targetSpeed = segDist / span
+            -- Suaviza (média móvel) em vez de aplicar bruto — a gravação
+            -- a 60x/s tem ruído frame a frame que sem isso faz a
+            -- animação "tremer" entre andar/correr/parado.
+            h.WalkSpeed = (h.WalkSpeed or targetSpeed) * 0.7 + targetSpeed * 0.3
+        end
 
         if a.st and a.st ~= lastAppliedState then
             local wasAirborne = lastAppliedState == "Jumping" or lastAppliedState == "Freefall"

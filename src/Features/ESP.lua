@@ -99,7 +99,11 @@ local function UpdateDrawings()
         if player ~= LocalPlayer then
             local char = player.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
-            local shouldShow = ESP.Settings.Enabled and root
+            -- Tracers/Distância não dependem mais do Chams (ESP.Settings.Enabled)
+            -- estar ligado — eram apresentados como toggles independentes na
+            -- aba, mas ficavam mudos sem o Chams também ligado. Agora só
+            -- dependem de si mesmos + TeamCheck.
+            local shouldShow = root ~= nil
                 and not (ESP.Settings.TeamCheck and player.Team == LocalPlayer.Team)
 
             if shouldShow then
@@ -137,6 +141,35 @@ local function HookPlayer(player)
     UpdateChams(player, player.Character)
 end
 
+-- Tracers/Distância têm conexão PRÓPRIA, independente do Chams — antes
+-- só existiam enquanto "Ativar Chams" tava ligado, o que os deixava
+-- mudos se o jogador quisesse só a linha/distância sem o highlight.
+ESP._drawConn = nil
+ESP._drawRemovingConn = nil
+
+local function EnsureDrawConnection()
+    local needed = ESP.Settings.Tracers or ESP.Settings.Distance
+    if needed and not ESP._drawConn then
+        ESP._drawConn = RunService.RenderStepped:Connect(UpdateDrawings)
+        ESP._drawRemovingConn = Players.PlayerRemoving:Connect(ClearDrawing)
+    elseif not needed and ESP._drawConn then
+        ESP._drawConn:Disconnect()
+        ESP._drawConn = nil
+        if ESP._drawRemovingConn then ESP._drawRemovingConn:Disconnect(); ESP._drawRemovingConn = nil end
+        for _, player in pairs(Players:GetPlayers()) do ClearDrawing(player) end
+    end
+end
+
+function ESP:ToggleTracers(v)
+    self.Settings.Tracers = v
+    EnsureDrawConnection()
+end
+
+function ESP:ToggleDistance(v)
+    self.Settings.Distance = v
+    EnsureDrawConnection()
+end
+
 function ESP:Toggle(state)
     ESP.Settings.Enabled = state
     if state then
@@ -148,12 +181,11 @@ function ESP:Toggle(state)
         end
         for _, player in pairs(Players:GetPlayers()) do HookPlayer(player) end
         table.insert(ESP._connections, Players.PlayerAdded:Connect(HookPlayer))
-        table.insert(ESP._connections, RunService.RenderStepped:Connect(UpdateDrawings))
         table.insert(ESP._connections, Players.PlayerRemoving:Connect(ClearDrawing))
         -- Sem cleanup manual do Highlight pro PlayerRemoving: ele é filho do
         -- Character, então some sozinho quando o Roblox destrói o
-        -- Character do jogador que saiu. Os Drawings de Tracer/Distância
-        -- já têm o ClearDrawing acima porque esses não são filhos de nada.
+        -- Character do jogador que saiu. Tracer/Distância têm conexão e
+        -- limpeza própria (EnsureDrawConnection), não dependem daqui.
     else
         for _, c in pairs(ESP._connections) do c:Disconnect() end
         ESP._connections = {}
@@ -163,8 +195,9 @@ function ESP:Toggle(state)
                 local hl = char:FindFirstChild("InxiterChams")
                 if hl then hl:Destroy() end
             end
-            ClearDrawing(player)
         end
+        -- Tracer/Distância NÃO são limpos aqui de propósito — são
+        -- independentes do Chams, continuam rodando se estiverem ligados.
     end
 end
 
@@ -176,6 +209,9 @@ end
 
 function ESP:Unload()
     self:Toggle(false)
+    if ESP._drawConn then ESP._drawConn:Disconnect(); ESP._drawConn = nil end
+    if ESP._drawRemovingConn then ESP._drawRemovingConn:Disconnect(); ESP._drawRemovingConn = nil end
+    for _, player in pairs(Players:GetPlayers()) do ClearDrawing(player) end
 end
 
 return ESP

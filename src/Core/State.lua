@@ -59,7 +59,14 @@ function StateManager:GetRuntimeState()
 end
 
 function StateManager:LoadConfig()
-    if not HasFileSystem() then return DefaultConfig end
+    -- Nos dois "return" de fallback abaixo, era devolvida a tabela
+    -- DefaultConfig ORIGINAL por referência, não uma cópia. Se o
+    -- executor não tem suporte a arquivo (ou a leitura falha), o Config
+    -- que as Tabs recebem e mutam direto (Config.X = valor) seria o
+    -- próprio DefaultConfig do módulo — corrompendo silenciosamente os
+    -- "padrões de fábrica" pro resto da sessão (inclusive pro botão
+    -- "Restaurar Padrões", que ia restaurar pros padrões já corrompidos).
+    if not HasFileSystem() then return self:GetDefaults() end
 
     if isfile(FILE_NAME) then
         local ok, content = pcall(readfile, FILE_NAME)
@@ -67,13 +74,12 @@ function StateManager:LoadConfig()
             local decodeOk, decoded = pcall(HttpService.JSONDecode, HttpService, content)
             if decodeOk and type(decoded) == "table" then
                 -- Mescla o que foi lido com o Default (previne erros de valores nulos)
-                local finalConfig = {}
-                for k,v in pairs(DefaultConfig) do finalConfig[k] = v end
+                local finalConfig = self:GetDefaults()
                 return DeepMerge(finalConfig, decoded)
             end
         end
     end
-    return DefaultConfig
+    return self:GetDefaults()
 end
 
 function StateManager:SaveConfig(currentConfig)

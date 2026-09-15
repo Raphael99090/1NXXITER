@@ -71,8 +71,8 @@ function Grammar:CorrectText(text, Config, callback)
             return
         end
 
-        local status = response.StatusCode or response.Status
-        local respBody = response.Body
+        local status = response.StatusCode or response.Status or response.statusCode or response.status
+        local respBody = response.Body or response.body
 
         local decOk, data = pcall(function() return HttpService:JSONDecode(respBody) end)
 

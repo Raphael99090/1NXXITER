@@ -22,20 +22,6 @@ function Tab:Render(WindowTab, Hub, Config, State)
 
     local initialEnumKey = Enum.KeyCode[Config.AimKey or "E"]
     if initialEnumKey and Hub.Features.Aimbot then Hub.Features.Aimbot.Settings.AimKey = initialEnumKey end
-
-    local Fixos = WindowTab:Section({ Title = "Atalhos Fixos (Referência)", Desc = "Controles que não podem ser alterados no momento.", Icon = "info", Opened = false })
-
-    Fixos:Paragraph({
-        Title = "✈️ Fly (Voo)",
-        Desc = "• W, A, S, D ou Joystick para mover.\n• Espaço para subir.\n• Ctrl (Control) para descer.\n• Botão de Pulo (Mobile) dá um empurrão para cima.",
-        Color = "White"
-    })
-
-    Fixos:Paragraph({
-        Title = "🎥 Câmera Livre (FreeCam)",
-        Desc = "• Arraste a tela ou mova o mouse para olhar.\n• W, A, S, D para mover.\n• E para subir, Q para descer.\n• Shift esquerdo para voar rápido.",
-        Color = "White"
-    })
 end
 
 return Tab

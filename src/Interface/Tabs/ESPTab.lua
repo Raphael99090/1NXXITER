@@ -30,9 +30,9 @@ function Tab:Render(WindowTab, Hub, Config, State)
     Chams:Toggle({ Flag = "ESPT", Title = "Ocultar Aliados", Desc = "Não exibe chams no seu próprio time.", Icon = "user-round-x", Value = Cfg.TeamCheck == true, Callback = function(v) Cfg.TeamCheck = v; Mod.Settings.TeamCheck = v; Mod:Refresh() end })
     Chams:Slider({ Flag = "ESPFill", Title = "Transparência do Chams", Desc = "0 = Sólido, 1 = Transparente.", Step = 0.01, Value = { Min = 0, Max = 1, Default = Cfg.FillTransparency or 0.6 }, Callback = function(v) Cfg.FillTransparency = v; Mod.Settings.FillTransparency = v; Mod:Refresh() end })
 
-    local Extra = WindowTab:Section({ Title = "Rastreamento Extra", Desc = "Indicadores de posição adicionais.", Icon = "sparkles", Opened = false })
-    Extra:Toggle({ Flag = "ESPTracer", Title = "Tracers", Desc = "Desenha uma linha guia até o alvo.", Icon = "route", Value = Cfg.Tracers == true, Callback = function(v) Cfg.Tracers = v; Mod.Settings.Tracers = v end })
-    Extra:Toggle({ Flag = "ESPDist", Title = "Distância", Desc = "Mostra a distância em metros.", Icon = "ruler", Value = Cfg.Distance == true, Callback = function(v) Cfg.Distance = v; Mod.Settings.Distance = v end })
+    local Extra = WindowTab:Section({ Title = "Rastreamento Extra", Desc = "Indicadores de posição adicionais — funcionam mesmo com o Chams desligado.", Icon = "sparkles", Opened = false })
+    Extra:Toggle({ Flag = "ESPTracer", Title = "Tracers", Desc = "Desenha uma linha guia até o alvo.", Icon = "route", Value = Cfg.Tracers == true, Callback = function(v) Cfg.Tracers = v; Mod:ToggleTracers(v) end })
+    Extra:Toggle({ Flag = "ESPDist", Title = "Distância", Desc = "Mostra a distância em metros.", Icon = "ruler", Value = Cfg.Distance == true, Callback = function(v) Cfg.Distance = v; Mod:ToggleDistance(v) end })
 end
 
 return Tab

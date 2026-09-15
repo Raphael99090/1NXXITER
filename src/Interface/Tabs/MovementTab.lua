@@ -21,8 +21,13 @@ function Tab:Render(WindowTab, Hub, Config, State)
     Fisica:Toggle({ Flag = "InfJumpE", Title = "Pulo Infinito no Ar", Desc = "Permite pular várias vezes seguidas.", Icon = "infinity", Value = Cfg.InfJump == true, Callback = function(v) Cfg.InfJump = v; Mod:ToggleInfJump(v) end })
 
     local Voo = WindowTab:Section({ Title = "Voo Livre", Desc = "Levite e ande pelo ar.", Icon = "plane", Opened = false })
-    Voo:Toggle({ Flag = "FlyE", Title = "Ativar Fly", Desc = "Voo 3D (Consulte a aba Atalhos para controles).", Icon = "plane", Value = Cfg.Fly == true, Callback = function(v) Cfg.Fly = v; Mod:ToggleFly(v) end })
+    Voo:Toggle({ Flag = "FlyE", Title = "Ativar Fly", Desc = "Voo 3D.", Icon = "plane", Value = Cfg.Fly == true, Callback = function(v) Cfg.Fly = v; Mod:ToggleFly(v) end })
     Voo:Slider({ Flag = "FlyV", Title = "Velocidade de Voo", Desc = "Rapidez ao voar.", Step = 1, Value = { Min = 10, Max = 300, Default = Cfg.FlySpeed or 50 }, Callback = function(v) Cfg.FlySpeed = v; Mod.Settings.FlySpeed = v end })
+    Voo:Paragraph({
+        Title = "Controles",
+        Desc = "• W, A, S, D ou Joystick para mover.\n• Espaço para subir.\n• Ctrl (Control) para descer.\n• Botão de Pulo (Mobile) dá um empurrão para cima.",
+        Color = "White"
+    })
 
     local Seguranca = WindowTab:Section({ Title = "Segurança", Desc = "Evite mortes acidentais.", Icon = "shield-check", Opened = false })
     Seguranca:Toggle({ Flag = "AntiVoidE", Title = "Anti-Void", Desc = "Teleporta você de volta caso caia do mapa.", Icon = "shield-alert", Value = Cfg.AntiVoid == true, Callback = function(v) Cfg.AntiVoid = v; Mod:ToggleAntiVoid(v) end })
