@@ -7,7 +7,6 @@ local FILE_NAME = FOLDER_NAME .. "/Config_v3.json"
 
 -- [ FONTE DA VERDADE ]: Valores padrões do Hub
 local DefaultConfig = {
-    AutoEquip = false,
     
     -- Atalhos
     AimKey = "E",
